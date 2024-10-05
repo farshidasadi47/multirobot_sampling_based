@@ -557,19 +557,19 @@ class Localization:
         kernel = np.ones((3, 3), np.uint8)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         # Find the external contours in the masked image
-        contours, _ = cv2.findContours(
-            mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        contours, hierarchy = cv2.findContours(
+            mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
         )
         if not len(contours):
             return None
         areas = np.array([cv2.contourArea(cnt) for cnt in contours])
         # Filter contours with areas outside of expected range.
         inds = np.where(
-            (areas >= 0.2 * real_robo_area) & (areas <= 2 * real_robo_area)
+            (areas >= 0.2 * real_robo_area) & (areas <= 3 * real_robo_area)
         )[0]
         if not len(inds):
             return None
-        idx = inds[np.abs(areas[inds] - real_robo_area).argmin()]
+        idx = inds[areas[inds].argmax()]
         cnt = contours[idx]
         rect = cv2.minAreaRect(cnt)
         pixel_state = self._pixel_state_from_rotated_rect(rect)
