@@ -145,7 +145,7 @@ class Localization:
             }
             # Blue or 'b'
             hsv_ranges["b"] = {
-                "lb": [np.array([90, 60, 60], dtype=np.uint8)],
+                "lb": [np.array([90, 60, 100], dtype=np.uint8)],
                 "ub": [np.array([115, 255, 255], dtype=np.uint8)],
             }
             # Green or 'g'
