@@ -646,7 +646,7 @@ class Localization:
         ret, frame = self.cap.read()
         if ret:
             # Process frame.
-            # frame = self._undistort(frame)
+            frame = self._undistort(frame)
             frame = self._crop(frame, self._roi_frame)
             masked = cv2.bitwise_and(frame, frame, mask=self._mask_space)
             hsv = cv2.cvtColor(masked, cv2.COLOR_BGR2HSV)
@@ -796,6 +796,8 @@ class Localization:
             has_frame, frame = self.cap.read()
             if not has_frame:
                 break
+            frame = self._undistort(frame)
+            frame = self._crop(frame, self._roi_frame)
             # Get current positions of all trackbars
             h_min = cv2.getTrackbarPos("H_min", "cam")
             s_min = cv2.getTrackbarPos("S_min", "cam")
