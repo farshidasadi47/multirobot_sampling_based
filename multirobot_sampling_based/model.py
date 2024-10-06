@@ -235,6 +235,7 @@ class SwarmSpecs:
         self.set_obstacles(
             obstacles=obstacles, obstacle_contours=obstacle_contours
         )
+        self._set_obstacle_scenario()
 
     def set_space(
         self,
@@ -276,6 +277,41 @@ class SwarmSpecs:
     def set_obstacles(self, *, obstacles=[], obstacle_contours=[]):
         self.obstacles = obstacles
         self.obstacle_contours = obstacle_contours
+
+    def _set_obstacle_scenario(self):
+        space_half = [
+            np.array(
+                [[-5, -25], [-5, -200], [5, -200], [5, -25]], dtype=float
+            ),
+            np.array([[-5, 200], [-5, 25], [5, 25], [5, 200]], dtype=float),
+        ]
+        self._scenarios = {
+            3: {0: [], 1: space_half},
+            4: {0: [], 1: space_half},
+            5: {0: [], 1: space_half},
+            10: {
+                0: [],
+                1: space_half,
+                2: [
+                    np.array(
+                        [[-75, 5], [-75, -200], [-65, -200], [-65, 5]],
+                        dtype=float,
+                    ),
+                    np.array(
+                        [[65, 200], [65, -5], [75, -5], [75, 200]], dtype=float
+                    ),
+                ],
+            },
+        }
+
+    @property
+    def scenarios(self):
+        return self._scenarios.get(self.n_robot, 3)
+
+    def set_obstacle_scenario(self, scenario=0):
+        self.obstacle_contours = self._scenarios[self.n_robot].get(
+            scenario, []
+        )
 
     def _set_letters(self):
         chars3 = dict()
