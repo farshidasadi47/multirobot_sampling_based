@@ -44,8 +44,8 @@ class Localization:
         self._img_name_prefix = "cal_img"
         # Change based on your real package directory.
         package_name = r"multirobot_sampling_based"
-        package_dir1 = r"/home/fa/"
-        package_dir2 = os.path.join(os.getenv("HOME", ""), "ros_ws", "src")
+        package_dir1 = os.path.join(r"/ros_ws/src/", package_name)
+        package_dir2 = os.path.join(os.getenv("HOME", ""), package_name)
         # Check if the directories exist and select the first one that does
         if os.path.isdir(package_dir1):
             package_dir = package_dir1
@@ -54,7 +54,7 @@ class Localization:
         else:
             raise FileNotFoundError("calibration_img was not found.")
         self._img_dir_prefix = os.path.join(
-            package_dir, package_name, package_name, "calibration_img"
+            package_dir, package_name, "calibration_img"
         )
         self._mtx = None
         self._dist = None
