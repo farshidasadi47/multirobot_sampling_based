@@ -1,0 +1,32 @@
+{
+    "name": "multirobot_sampling_based",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "dev",
+    "runServices": ["dev"],
+    "workspaceFolder": "/ros_ws/src/multirobot_sampling_based",
+    "customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+			// Set *default* container specific settings.json values on container create.
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash (2)",
+                "terminal.integrated.profiles.linux": {
+                    "bash(2)": {
+                        "path": "usr/bin/bash"
+                    }
+                },
+                "python.pythonPath": "/usr/bin/python3",
+                "python.terminal.executeInFileDir": true,
+                "jupyter.jupyterServerType": "local"
+            },
+			"extensions": [
+                "ms-python.python",
+                "ms-vscode.cpptools",
+                "ms-toolsai.jupyter",  // Jupyter extension
+                "ms-python.ipykernel"  // IPython kernel extension
+                //"ms-iot.vscode-ros"  // ROS extension
+            ]
+        }
+    }
+  }
+  

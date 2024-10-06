@@ -1,0 +1,150 @@
+# USE docker compose --profile "*" build --no-cache to build all profiles
+name: multirobot_sampling_based
+services:
+  # Base image containing dependencies.
+  base:
+    image: multirobot_sampling_based:base
+    profiles: [base]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ROS_DISTRO: humble
+      target: base
+    # Interactive shell
+    stdin_open: true
+    tty: true
+    # Using host network
+    network_mode: host
+    # Using host's Inter-Process Communications
+    ipc: host
+    # Camera and arduino
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/ttyACM0:/dev/ttyACM0
+    # Needed for displaying GUIs
+    privileged: true
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - ROS_DOMAIN_ID=0
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-$HOME/.Xauthority}:/root/.Xauthority
+      - ./:/ros_ws/src/multirobot_sampling_based/:rw
+  # Overlay
+  overlay:
+    extends: base
+    image: multirobot_sampling_based:overlay
+    profiles: [overlay]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: overlay
+  # Arduino
+  arduino:
+    extends: base
+    image: multirobot_sampling_based:arduino
+    profiles: [arduino]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: arduino
+  # dev
+  dev:
+    extends: base
+    image: multirobot_sampling_based:dev
+    profiles: [dev]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+  # Serial
+  serial:
+    extends: base
+    profiles: [serial]
+    entrypoint: /ros_entrypoint.sh
+    command: ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyACM0
+  # get video
+  getvideo:
+    extends: overlay
+    profiles: [getvideo]
+    entrypoint: /ros_entrypoint.sh
+    command: ros2 run multirobot_sampling_based getvideo
+  # show video
+  showvideo:
+    extends: dev
+    profiles: [showvideo]
+    entrypoint: /ros_entrypoint.sh
+    command: ros2 run multirobot_sampling_based showvideo
+  # closedloop
+  closedloop:
+    extends: overlay
+    profiles: [showvideo]
+    entrypoint: /ros_entrypoint.sh
+    command: ros2 run multirobot_sampling_based closedloop
+########## ROS services and actions ####################################
+  # set_idle
+  set_idle:
+    extends: overlay
+    profiles: [set_idle]
+    entrypoint: /ros_entrypoint.sh
+    command: ros2 service call /set_idle std_srvs/srv/Empty
+  # mode_change
+  mode_change:
+    extends: overlay
+    profiles: [mode_change]
+    entrypoint: /ros_entrypoint.sh
+    command: >
+      ros2 action send_goal /mode_change turtlesim/action/RotateAbsolute "{theta: 0.0}"
+  # pivot_walking
+  pivot_walking:
+    extends: overlay
+    profiles: [pivot_walking]
+    entrypoint: /ros_entrypoint.sh
+    command: >
+      ros2 action send_goal /pivot_walking turtlesim/action/RotateAbsolute "{theta: 0.0}"
+  # tumbling
+  tumbling:
+    extends: overlay
+    profiles: [tumbling]
+    entrypoint: /ros_entrypoint.sh
+    command: >
+      ros2 action send_goal /tumbling turtlesim/action/RotateAbsolute "{theta: 0.0}"
+  # cartesian_walking
+  cart_pivot:
+    extends: overlay
+    profiles: [cart_pivot]
+    entrypoint: /ros_entrypoint.sh
+    command: >
+      ros2 action send_goal /cart_pivot turtlesim/action/RotateAbsolute "{theta: 0.0}"
+  # calibration_pivot
+  calibration_pivot:
+    extends: overlay
+    profiles: [calibration_pivot]
+    entrypoint: /ros_entrypoint.sh
+    command: >
+      ros2 action send_goal /calibration_pivot turtlesim/action/RotateAbsolute "{theta: 0.0}"
+  # calibration_tumble
+  calibration_tumble:
+    extends: overlay
+    profiles: [calibration_tumble]
+    entrypoint: /ros_entrypoint.sh
+    command: >
+      ros2 action send_goal /calibration_tumble turtlesim/action/RotateAbsolute "{theta: 0.0}"
+  # closed_line
+  closed_lines:
+    extends: overlay
+    profiles: [closed_line]
+    entrypoint: /ros_entrypoint.sh
+    command: >
+      ros2 action send_goal /closed_lines turtlesim/action/RotateAbsolute "{theta: 0.0}"
+  # closed_plan
+  closed_plan:
+    extends: overlay
+    profiles: [closed_plan]
+    entrypoint: /ros_entrypoint.sh
+    command: >
+      ros2 action send_goal /closed_plan turtlesim/action/RotateAbsolute "{theta: 0.0}"
+  
