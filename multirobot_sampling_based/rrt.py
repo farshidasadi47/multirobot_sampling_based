@@ -578,7 +578,7 @@ class RRT:
         #
         self._goal_inds = []
         self._goal_ind_values = {}
-        self._best_value = float("inf")
+        self.best_value = float("inf")
         self._best_ind = None
         self._paths = []
         self._best_path_ind = None
@@ -880,7 +880,7 @@ class RRT:
     def _add_new_path(self, ind):
         ltype = 1
         inds_to_draw = []
-        if self._values[ind] < self._best_value * 0.99:
+        if self._values[ind] < self.best_value * 0.99:
             # New best path is found.
             if self._best_path_ind is not None:
                 # Set ltype of previous best path to suboptimal.
@@ -890,7 +890,7 @@ class RRT:
             ltype = 2
             self._best_ind = ind
             self._best_path_ind = len(self._paths)
-            self._best_value = self._values[ind]
+            self.best_value = self._values[ind]
         # Generate path and set suboptimal path ltype.
         self._generate_path(ind)
         self._set_ltype(self._paths[-1]["inds"], ltype)
@@ -931,7 +931,7 @@ class RRT:
         if len(self._goal_inds):
             ind_best = self._values[self._goal_inds].argmin()
             ind_best = self._goal_inds[ind_best]
-            if self._values[ind_best] < self._best_value * 0.99:
+            if self._values[ind_best] < self.best_value * 0.99:
                 # A better path has been discovered.
                 inds_to_draw += self._add_new_path(ind_best)
         return inds_to_draw
