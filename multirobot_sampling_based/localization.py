@@ -666,6 +666,7 @@ class Localization:
                     continue
                 pixel_state, box = v
                 current_state = self._pixel2cartesian(pixel_state)
+                current_state[:2] = model.round_down(current_state[:2], dec=1)
                 robot_states[3 * i : 3 * i + 3] = current_state
                 if draw_robots:
                     cv2.drawContours(frame, [box], -1, self._colors[k], 2)
