@@ -189,10 +189,7 @@ class SwarmSpecs:
         # Construct control matrix B by reshaping W.
         self.B = self.W.T.reshape((self.n_mode, 2, -1)).transpose((0, 2, 1))
         # Construct uncertainty matrix E.
-        self.E = [
-            np.diag(np.vstack((x, x)).T.ravel())
-            for x in self.uncertainty_scaling.T
-        ]
+        self.E = np.array([np.diag(x) for x in self.uncertainty_scaling.T])
         # Control gains.
         self.K = -np.reshape(np.linalg.pinv(self.W), (self.n_mode, 2, -1))
         # Next mode when odd number of tumbling.
@@ -527,9 +524,7 @@ class SwarmSpecs:
     @classmethod
     def robo3(cls):
         pivot_length = np.array([[9, 7], [7, 5], [5, 9]])
-        uncertainty_scaling = 0.2 * np.array(
-            [[5, 5, 5], [5, 5, 5], [5, 5, 5]], dtype=float
-        )
+        uncertainty_scaling = 0.2 * np.ones((2 * 3, 3))
         return cls(pivot_length, 10, uncertainty_scaling)
 
     @classmethod
@@ -537,15 +532,7 @@ class SwarmSpecs:
         pivot_length = np.array(
             [[9, 7, 5, 3], [7, 5, 3, 9], [5, 3, 9, 7], [3, 9, 7, 5]]
         )
-        uncertainty_scaling = 0.2 * np.array(
-            [
-                [5, 5, 5, 5, 5],
-                [5, 5, 5, 5, 5],
-                [5, 5, 5, 5, 5],
-                [5, 5, 5, 5, 5],
-            ],
-            dtype=float,
-        )
+        uncertainty_scaling = 0.2 * np.ones((2 * 4, 5))
         return cls(pivot_length, 10, uncertainty_scaling)
 
     @classmethod
@@ -559,16 +546,7 @@ class SwarmSpecs:
                 [10, 10, 6, 8],
             ]
         )
-        uncertainty_scaling = 0.2 * np.array(
-            [
-                [5, 5, 5, 5, 5],
-                [5, 5, 5, 5, 5],
-                [5, 5, 5, 5, 5],
-                [5, 5, 5, 5, 5],
-                [5, 5, 5, 5, 5],
-            ],
-            dtype=float,
-        )
+        uncertainty_scaling = 0.2 * np.ones((2 * 5, 5))
         return cls(pivot_length, 10, uncertainty_scaling)
 
     @classmethod
@@ -588,7 +566,7 @@ class SwarmSpecs:
             ],
             dtype=float,
         )
-        uncertainty_scaling = np.zeros((10, 11))
+        uncertainty_scaling = np.zeros((10 * 2, 11))
         specs = cls(pivot_length, 1, uncertainty_scaling)
         specs.set_space(
             lbx=-150,
@@ -604,9 +582,7 @@ class SwarmSpecs:
     @classmethod
     def robo3p(cls):
         pivot_length = np.array([[8.46, 6.67], [6.61, 4.75], [4.79, 8.18]])
-        uncertainty_scaling = np.array(
-            [[5, 5, 5], [5, 5, 5], [5, 5, 5]], dtype=float
-        )
+        uncertainty_scaling = 0.2 * np.ones((2 * 3, 3))
         return cls(pivot_length, 11.44, uncertainty_scaling)
 
     @classmethod
@@ -619,10 +595,7 @@ class SwarmSpecs:
                 [4.91, 7.28, 4.93, 5.12],
             ]
         )
-        uncertainty_scaling = 0.2 * np.array(
-            [[5, 5, 5, 5], [5, 5, 5, 5], [5, 5, 5, 5], [5, 5, 5, 5]],
-            dtype=float,
-        )
+        uncertainty_scaling = 0.2 * np.ones((2 * 4, 5))
         return cls(pivot_length, 13.63, uncertainty_scaling)
 
     @classmethod
@@ -636,16 +609,7 @@ class SwarmSpecs:
                 [4.80, 4.90, 8.10, 8.20],
             ]
         )
-        uncertainty_scaling = 0.2 * np.array(
-            [
-                [5, 5, 5, 5, 5],
-                [5, 5, 5, 5, 5],
-                [5, 5, 5, 5, 5],
-                [5, 5, 5, 5, 5],
-                [5, 5, 5, 5, 5],
-            ],
-            dtype=float,
-        )
+        uncertainty_scaling = 0.2 * np.ones((2 * 5, 5))
         return cls(pivot_length, 15.24, uncertainty_scaling)
 
     @classmethod
