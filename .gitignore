@@ -1,9 +1,21 @@
 # Costum
 *.json
+!devcontainer.json
 *.txt
-test*.*
+.bash*
+.gitconfig
+.gnupg*
+**/calibration_img/*
+result_sim/
+calibration_img/
+results/
+*/test*
 # Python
-.vscode
+.vscode*
+.cache*
+.local*
+.dotnet*
+.python_history
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -15,6 +27,8 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+log/
+install/
 develop-eggs/
 dist/
 downloads/
