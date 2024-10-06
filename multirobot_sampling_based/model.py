@@ -31,8 +31,7 @@ plt.rcParams["hatch.linewidth"] = 0.5
 ########## Functions ###################################################
 def round_down(arr, dec=2):
     m = 10**dec
-    arr = np.atleast_1d(arr)
-    return np.floor(arr * m) / m
+    return np.floor(np.asarray(arr) * m) / m
 
 
 def wrap_pi(angles):
