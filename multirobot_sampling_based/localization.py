@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import cv2
 
 try:
-    from swarm import model
+    from multirobot_sampling_based import model
 except ModuleNotFoundError:
     import model
 

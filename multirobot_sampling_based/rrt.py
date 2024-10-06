@@ -20,7 +20,7 @@ import cv2 as cv
 import fcl
 
 try:
-    from swarm import model
+    from multirobot_sampling_based import model
 except ModuleNotFoundError:
     import model
 

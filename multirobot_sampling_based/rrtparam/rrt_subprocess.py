@@ -12,13 +12,10 @@ import os
 import json
 
 try:
-    from swarm import rrt
+    from multirobot_sampling_based import rrt
     import rrtparam
 except ModuleNotFoundError:
     import rrtparam
-
-    sys.path.append(os.path.abspath(".."))
-    import rrt
 except Exception as exc:
     print(type(exc).__name__, exc.args)
 ########## Main code ###################################################

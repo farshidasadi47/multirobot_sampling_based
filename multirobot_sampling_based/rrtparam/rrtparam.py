@@ -21,8 +21,8 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 
 try:
-    from stochastic_multirobot import model
-    from stochastic_multirobot.rrt import Obstacles, Collision, RRT, RRTS
+    from multirobot_sampling_based import model
+    from multirobot_sampling_based.rrt import Obstacles, Collision, RRT, RRTS
 except ModuleNotFoundError:
     # Add parent directory and import modules.
     sys.path.append(os.path.abspath(".."))
