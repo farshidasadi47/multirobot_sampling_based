@@ -9,7 +9,6 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2 as cv
 from matplotlib import animation
 from matplotlib.patches import Polygon
 from matplotlib.collections import LineCollection
@@ -1101,7 +1100,7 @@ class Simulation:
         anim_length = min(anim_length, n_steps)
         # Set the figure properties
         dpi = 100
-        fig, ax = plt.subplots(layout="compressed")
+        fig, ax = plt.subplots(layout="tight")
         fig.set_size_inches(19.2, 10.8)
         fig.set_dpi(dpi)
         self._simplot_set(ax, boundary)
@@ -1140,6 +1139,8 @@ class Simulation:
                 bitrate=10000,
                 extra_args=["-crf", "0"],
             )
+        plt.show(block=False)
+        plt.pause(0.01)
         return anim
 
     def _make_dense(self, poses, cmds, step):
