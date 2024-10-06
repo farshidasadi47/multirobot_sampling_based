@@ -574,7 +574,7 @@ class Localization:
         rect = cv2.minAreaRect(cnt)
         pixel_state = self._pixel_state_from_rotated_rect(rect)
         box = cv2.boxPoints(rect)
-        box = np.int0(box)
+        box = np.intp(box)
         return pixel_state, box
 
     def _pixel2cartesian(self, point):
