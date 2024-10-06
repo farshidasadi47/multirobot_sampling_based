@@ -381,8 +381,8 @@ class Collision:
         # Pad last axis with zero.
         pose_i = np.concatenate((pose_i, np.zeros((len(pose_i), 1))), axis=1)
         pose_f = np.concatenate((pose_f, np.zeros((len(pose_f), 1))), axis=1)
-        time_collisions = []
-        is_collisions = []
+        time_collisions = [np.inf]
+        is_collisions = [False]
         for pos_i, pos_f in zip(pose_i, pose_f):
             robot = fcl.CollisionObject(self.ball0, fcl.Transform(pos_i))
             for obstacle in self.obstacles:
@@ -1564,14 +1564,8 @@ def test_collision():
     pose_i = np.array([0.0, 0.0, -40.0, 20.0, 20.0, 0.0], dtype=float)
     pose_f = np.array([0.0, 75.0, 75.0, 20.0, 20.0, 74.0], dtype=float)
     poses = np.linspace(pose_i, pose_f, N + 1)
-
-    print(f"Discrete {collision._is_collision_discrete(poses)}")
-    print(
-        f"Line discrete{collision._is_collision_line_discrete(pose_i, pose_f)}"
-    )
+    #
     print(f"Inc {collision._is_collision_inc(poses)}")
-    print(f"Line inc {collision._is_collision_line_inc(pose_i, pose_f)}")
-    print(f"Line cont {collision._is_collision_line_cont(pose_i, pose_f)}")
     print(
         f"Line intra {collision._is_collision_line_intrarobot(pose_i, pose_f)}"
     )
