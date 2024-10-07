@@ -651,6 +651,59 @@ class Controller:
             line_up = False
             cnt += 1
 
+    def _get_calibration_msg(
+        self, angles, lengths, ang_errs, dxs, cnts, phis, tumble=False
+    ):
+        lengths = np.array(lengths)
+        ang_errs = np.array(ang_errs)
+        dxs = np.array(dxs)
+        cnts = np.array(cnts)
+        phis = np.array(phis)
+        # Calculate statistics.
+        l_mean = np.mean(lengths)
+        and_err_mean = np.rad2deg(np.mean(ang_errs))
+        pivot_mult = 1.0 if tumble else np.sin(self.theta_sweep)
+        dxs_mean = (
+            np.vstack((np.cos(phis), np.sin(phis)))
+            * cnts
+            * l_mean
+            * pivot_mult
+        ).T
+        ddxs = dxs - dxs_mean
+        # dx_var = np.sum(ddxs**2, axis=0) / len(ddxs)
+        dx_var = np.var(ddxs, axis=0)
+        dx_std = dx_var**0.5
+        # Print measurements and statistics.
+        msg = "Calibration stats:\n"
+        msg += "\n".join(
+            (
+                f"ang: {np.rad2deg(phi):+07.2f}| "
+                + f"length: {length:+07.2f}| "
+                + f"ang_err: {np.rad2deg(ang_err):+07.2f}| "
+                + f"cnt: {cnt:2d}"
+                + "| "
+                + f"dx, dy: "
+                + ", ".join(f"{x:+07.2f}" for x in dx)
+                + "| "
+                + f"Edx, Edy: "
+                + ", ".join(f"{x:+07.2f}" for x in dx_mean)
+                + "| "
+                + f" Ddx, Ddy: "
+                + ", ".join(f"{x:+07.2f}" for x in ddx)
+            )
+            for phi, length, ang_err, cnt, dx, dx_mean, ddx in zip(
+                phis, lengths, ang_errs, cnts, dxs, dxs_mean, ddxs
+            )
+        )
+        # Print polar statictics.
+        m_type = "tumble" if tumble else "pivot"
+        msg += f"\nAverage {m_type} length:{l_mean:+07.2f}"
+        msg += f"\n  Coeff of variation:{np.std(lengths)/l_mean:+07.2f}"
+        msg += f"\n     Average ang_err:{and_err_mean:+07.2f}"
+        msg += f"\nSTD of dx: {dx_std[0]:+07.2f}, dy: {dx_std[1]:+07.2f}"
+        msg += f"\nVar of dx: {dx_var[0]:+07.2f}, dy: {dx_var[1]:+07.2f}"
+        return msg
+
     def pivot_calibration_walk(self, cmd):
         """feedforfard walking for calibraiton purpose."""
         r, phi = cmd[0], cmd[1]
@@ -714,45 +767,9 @@ class Controller:
             dxs.append(dx)
             cnts.append(cnt)
             phis.append(phi_e)
-        lengths = np.array(lengths).reshape(-1, 2)
-        ang_errs = np.array(ang_errs).reshape(-1, 2)
-        dxs = np.array(dxs).reshape(-1, 2, 2)
-        cnts = np.array(cnts)
-        phis = np.array(phis)
-        # Print raw measurements.
-        msg = "Calibration stats:\n"
-        msg += "\n".join(
-            (
-                f"ang: {np.rad2deg(ang):+07.2f}| "
-                + f"length: {piv[0]:+07.2f}, {piv[1]:+07.2f}| "
-                + f"ang_err: {np.rad2deg(ang_err[0]):+07.2f}, "
-                + f"{np.rad2deg(ang_err[1]):+07.2f}| "
-                + f"dx: "
-                + ", ".join(f"{x:+07.2f}" for x in dx[0])
-                + f"  dx: "
-                + ", ".join(f"{x:+07.2f}" for x in dx[1])
-            )
-            for ang, piv, ang_err, dx in zip(angles, lengths, ang_errs, dxs)
+        msg = self._get_calibration_msg(
+            angles, lengths, ang_errs, dxs, cnts, phis, tumble=False
         )
-        # Calculate and print statistics.
-        l_mean = np.mean(lengths)
-        and_err_mean = np.rad2deg(np.mean(ang_errs))
-        dxs = dxs.reshape(-1, 2)
-        dxs_mean = (
-            np.vstack((np.cos(phis), np.sin(phis)))
-            * cnts
-            * l_mean
-            * np.sin(self.theta_sweep)
-        ).T
-        ddxs = dxs - dxs_mean
-        # dx_var = np.sum(ddxs**2, axis=0) / len(ddxs)
-        dx_var = np.var(ddxs, axis=0)
-        dx_std = dx_var**0.5
-        msg += f"\nAverage pivot length:{l_mean:+07.2f}"
-        msg += f"\n  Coeff of variation:{np.std(lengths)/l_mean:+07.2f}"
-        msg += f"\n     Average ang_err:{and_err_mean:+07.2f}"
-        msg += f"\nSTD of dx: {dx_std[0]:+07.2f}, dy: {dx_std[1]:+07.2f}"
-        msg += f"\nVar of dx: {dx_var[0]:+07.2f}, dy: {dx_var[1]:+07.2f}"
         return msg
 
     def tumble_calibration_walk(self, cmd):
@@ -812,40 +829,9 @@ class Controller:
             dxs.append(dx)
             cnts.append(cnt)
             phis.append(phi_e)
-        lengths = np.array(lengths).reshape(-1, 2)
-        ang_errs = np.array(ang_errs).reshape(-1, 2)
-        dxs = np.array(dxs).reshape(-1, 2, 2)
-        cnts = np.array(cnts)
-        phis = np.array(phis)
-        # Print raw measurements.
-        msg = "Calibration stats:\n"
-        msg += "\n".join(
-            (
-                f"ang: {np.rad2deg(ang):+07.2f}, "
-                + f"length: {piv[0]:+07.2f},{piv[1]:+07.2f}| "
-                + f"ang_err: {np.rad2deg(ang_err[0]):+07.2f},"
-                + f"{np.rad2deg(ang_err[1]):+07.2f}| "
-                + f"dx: "
-                + ",".join(f"{x:+07.2f}" for x in dx[0])
-                + f"  dx: "
-                + ",".join(f"{x:+07.2f}" for x in dx[1])
-            )
-            for ang, piv, ang_err, dx in zip(angles, lengths, ang_errs, dxs)
+        msg = self._get_calibration_msg(
+            angles, lengths, ang_errs, dxs, cnts, phis, tumble=True
         )
-        # Calculate and print statistics.
-        l_mean = np.mean(lengths)
-        and_err_mean = np.rad2deg(np.mean(ang_errs))
-        dxs = dxs.reshape(-1, 2)
-        dxs_mean = (np.vstack((np.cos(phis), np.sin(phis))) * cnts * l_mean).T
-        ddxs = dxs - dxs_mean
-        # dx_var = np.sum(ddxs**2, axis=0) / len(ddxs)
-        dx_var = np.var(ddxs, axis=0)
-        dx_std = dx_var**0.5
-        msg += f"\nAverage tumble length:{l_mean:+07.2f}"
-        msg += f"\n   Coeff of variation:{np.std(lengths)/l_mean:+07.2f}"
-        msg += f"\n      Average ang_err:{and_err_mean:+07.2f}"
-        msg += f"\nSTD of dx: {dx_std[0]:+07.2f}, dy: {dx_std[1]:+07.2f}"
-        msg += f"\nVar of dx: {dx_var[0]:+07.2f}, dy: {dx_var[1]:+07.2f}"
         return msg
 
     def get_cartesian_goal(self, pos, mode_start, cmds):
@@ -1125,7 +1111,7 @@ class Controller:
             finished = True
         else:
             yield from self.closed_lines(np.zeros(3), start)
-            msg = "Plan aborted.\n" +  "-" * 79
+            msg = "Plan aborted.\n" + "-" * 79
             finished = False
         return msg, finished
 
