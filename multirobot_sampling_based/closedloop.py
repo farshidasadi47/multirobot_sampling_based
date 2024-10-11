@@ -662,6 +662,7 @@ class Controller:
         # Calculate statistics.
         l_mean = np.mean(lengths)
         and_err_mean = np.rad2deg(np.mean(ang_errs))
+        and_err_std = np.rad2deg(np.std(ang_errs))
         pivot_mult = 1.0 if tumble else np.sin(self.theta_sweep)
         dxs_mean = (
             np.vstack((np.cos(phis), np.sin(phis)))
@@ -698,8 +699,10 @@ class Controller:
         # Print polar statictics.
         m_type = "tumble" if tumble else "pivot"
         msg += f"\nAverage {m_type} length:{l_mean:+07.2f}"
+        msg += f"\n      Std of lengths:{np.std(lengths):+07.2f}"
         msg += f"\n  Coeff of variation:{np.std(lengths)/l_mean:+07.2f}"
         msg += f"\n     Average ang_err:{and_err_mean:+07.2f}"
+        msg += f"\n         Std ang_err:{and_err_std:+07.2f}"
         msg += f"\nSTD of dx: {dx_std[0]:+07.2f}, dy: {dx_std[1]:+07.2f}"
         msg += f"\nVar of dx: {dx_var[0]:+07.2f}, dy: {dx_var[1]:+07.2f}"
         return msg
