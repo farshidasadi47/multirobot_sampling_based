@@ -13,7 +13,7 @@ import re
 import csv
 from itertools import groupby
 from pprint import pprint
-import traceback
+import traceback as tback
 
 import numpy as np
 import cv2
@@ -1501,7 +1501,7 @@ class ControlNode(NodeTemplate):
                 pass
             except Exception as exc:
                 print(type(exc).__name__, exc.args)
-                traceback.print_exc()
+                tback.print_exc()
                 self.publish_logs(record=0)
                 self.publish_field([0.0] * 3)
                 self.rate.sleep()
