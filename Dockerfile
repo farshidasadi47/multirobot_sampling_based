@@ -3,6 +3,10 @@
 # This Dockerfile was greatly inspired by the guide on docker and ROS2
 # from roboticseabass.com.
 # Author: Farshid Asadi, farshidasadi47@yahoo.com
+########## Some instructions ###########################################
+# Run the following command in the container folder to build it.
+# docker build --no-cache .
+# Or use the docker-compose file.
 ########## base image ##################################################
 ARG ROS_DISTRO=humble
 # Use an official ROS2 image

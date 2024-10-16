@@ -1,3 +1,10 @@
+########## Some instructions ###########################################
+# Before running the container some premossions should be given.
+# - Add your user to docker group, see docker doc for details.
+# - Allow access to X server by using in bash: xhost +local:docker
+# - xhost +local:docker  # Allow access to X server for GUIs.
+# - sudo chmode 777 /dev/video0  # For camera access.
+# - sudo chmod 777 /dev/ttyACM0  # For arduino access.
 # USE docker compose --profile "*" build --no-cache to build all profiles
 name: multirobot_sampling_based
 services:
