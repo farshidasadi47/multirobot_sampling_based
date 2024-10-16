@@ -23,7 +23,7 @@ RUN . /opt/ros/$ROS_DISTRO/setup.bash \
  && rosdep install --from-paths src --ignore-src -y
 # Install pip
 RUN apt-get update && apt-get upgrade -y \
-  && apt-get install -y python3-pip ffmpeg
+  && apt-get install -y python3-pip ffmpeg python3-tk
 # Use Cyclone DDS as middleware
 RUN apt-get update && apt-get install -y --no-install-recommends \
  ros-${ROS_DISTRO}-rmw-cyclonedds-cpp
@@ -69,6 +69,7 @@ RUN pip install numpy==1.26.4 \
     python-fcl==0.7.0.6 \
     seaborn==0.13.2 \
     scikit-video==1.1.11 \
+    pillow==11.0.0 \
     black \
     ipykernel
 # Build the package
