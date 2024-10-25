@@ -1383,6 +1383,7 @@ class Simulation:
         self._draw_robots_simselected(
             ax, poses[-1, -1], cmds[-1, 2], start=False
         )
+        self._draw_legend(ax)
         # Dense the points and make line segments.
         for poss, cmd in zip(poses, cmds):
             cmd_mode = int(cmd[2])
