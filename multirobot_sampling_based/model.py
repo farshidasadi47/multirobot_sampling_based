@@ -1071,7 +1071,7 @@ class Simulation:
         self._simplot_plot(ax, plot_length, step, title, last_section)
         # Saving figure if requested.
         if file_name:
-            file_name = os.path.join(os.getcwd(), f"{file_name}.pdf")
+            file_name = os.path.join(os.getcwd(), f"{file_name}_simplot.pdf")
             fig.savefig(file_name, bbox_inches="tight", pad_inches=0.05)
         return fig, ax
 
@@ -1088,7 +1088,7 @@ class Simulation:
         title=True,
         boundary=False,
         last_section=False,
-        save=False,
+        file_name=None,
     ):
         """This function produces an animation from swarm transition
         for a given logical input series and specified length."""
@@ -1125,24 +1125,10 @@ class Simulation:
             # repeat=False,
         )
         # Saving animation.
-        if save:
-            # Set file name for saving animation.
-            index_for_saving = 1
-            anim_name = f"sim_anim_{index_for_saving:02d}.mp4"
-            anim_directory = os.path.join(os.getcwd(), "result_sim")
-            # If the directory does not exist, make one.
-            if not os.path.exists(anim_directory):
-                os.mkdir(anim_directory)
-            anim_path = os.path.join(anim_directory, anim_name)
-            # Check if the current file name exists in the directory.
-            while os.path.exists(anim_path):
-                # Increase file number index until no file with such
-                # name exists.
-                index_for_saving += 1
-                anim_name = f"sim_anim_{index_for_saving:02d}.mp4"
-                anim_path = os.path.join(anim_directory, anim_name)
+        if file_name:
+            file_name = os.path.join(os.getcwd(), f"{file_name}.mp4")
             anim.save(
-                anim_path,
+                file_name,
                 fps=fps,
                 writer="ffmpeg",
                 codec="libx264",
@@ -1253,7 +1239,7 @@ class Simulation:
         cbar.set_ticks([0, 100])
         self._legend_single(ax)
         if file_name:
-            file_name = os.path.join(os.getcwd(), f"{file_name}.pdf")
+            file_name = os.path.join(os.getcwd(), f"{file_name}_single.pdf")
             fig.savefig(file_name, bbox_inches="tight", pad_inches=0.05)
 
     def _legend_selected(self, ax):
@@ -1366,7 +1352,7 @@ class Simulation:
         )
         self._legend_selected(ax)
         if file_name:
-            file_name = os.path.join(os.getcwd(), f"{file_name}.pdf")
+            file_name = os.path.join(os.getcwd(), f"{file_name}_selected.pdf")
             fig.savefig(file_name, bbox_inches="tight", pad_inches=0.05)
 
     def _draw_robots_simselected(self, ax, pos, cmd_mode, start=True):
@@ -1412,6 +1398,11 @@ class Simulation:
                     markevery=[0],
                     mfc="none",
                 )
+        if file_name:
+            file_name = os.path.join(
+                os.getcwd(), f"{file_name}_simselected.pdf"
+            )
+            fig.savefig(file_name, bbox_inches="tight", pad_inches=0.05)
 
 
 def test_simulation():
@@ -1681,14 +1672,15 @@ def test_simulation10():
         boundary=True,
         last_section=False,
         title=False,
+        file_name=file_name,
     )
-    """anim = simulation.simanimation(
+    """ anim = simulation.simanimation(
         vel=30,
         anim_length=1100,
         boundary=True,
         last_section=True,
-        save=True,
-    )"""
+        file_name=file_name,
+    ) """
     plt.show()
 
 
