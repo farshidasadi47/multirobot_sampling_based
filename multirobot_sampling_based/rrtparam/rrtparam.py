@@ -625,7 +625,7 @@ def evaluate_single_subprocess(planner, max_size, n=10, **params):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            stdout, stderr = process.communicate(timeout=3600)
+            stdout, stderr = process.communicate(timeout=5400)
             return stdout, stderr
         except Exception as e:
             process.kill()
@@ -634,7 +634,7 @@ def evaluate_single_subprocess(planner, max_size, n=10, **params):
     with ThreadPoolExecutor(max_workers=N_CPU) as executor:
         futures = [executor.submit(subprocessor) for _ in range(n)]
         for future in as_completed(futures):
-            stdout, stderr = future.result(timeout=3600)
+            stdout, stderr = future.result(timeout=5400)
             if stdout:
                 matched = re.search(r"(\{.+\})$", stdout.decode("utf-8"))
                 if matched:
