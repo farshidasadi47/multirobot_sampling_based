@@ -8,7 +8,8 @@ from itertools import combinations
 import os
 
 import matplotlib  # Move this up so matplotlib.use can be called early
-matplotlib.use('TkAgg')  # Set the backend before importing pyplot
+
+matplotlib.use("TkAgg")  # Set the backend before importing pyplot
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation
