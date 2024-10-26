@@ -171,6 +171,73 @@ def rrt4(
     return result
 
 
+def errt4(
+    max_size,
+    tol_cmd=1e-2,
+    goal_bias=0.05,
+    **kwargs,
+):
+    # Build specs of robots and obstacles.
+    specs = model.SwarmSpecs.robo(4)
+    # Obstacle contours.
+    obstacle_contours = [
+        np.array([[-5, -25], [-5, -100], [5, -100], [5, -25]], dtype=float),
+        np.array([[-5, 100], [-5, 25], [5, 25], [5, 100]], dtype=float),
+    ]
+    obstacles = Obstacles(specs, obstacle_contours)
+    obstacle_contours = obstacles.get_cartesian_obstacle_contours()
+    mesh, mesh_contours = obstacles.get_obstacle_mesh()
+    # Add obstacles to specification.
+    specs.set_obstacles(obstacle_contours=obstacle_contours)
+
+    collision = Collision(mesh, specs)
+    #
+    pose_i = np.array([40, 45, 40, 15, 40, -15, 40, -45], dtype=float)
+    pose_f = np.array([-40, 45.0, -40, 15, -40, -15, -40, -45], dtype=float)
+    #
+    rrt = RRT(
+        specs,
+        collision,
+        obstacle_contours,
+        max_size=max_size,
+        tol_cmd=tol_cmd,
+        goal_bias=goal_bias,
+    )
+    for _ in range(3):
+        start_time = time.time()
+        rrt.plan(
+            pose_i,
+            pose_f,
+            [0, 1, 2, 3, 4],
+            anim_online=False,
+            plot=False,
+            log=False,
+        )
+        end_time = time.time()
+        runtime = end_time - start_time
+        print(f"The runtime of the test() function is {runtime} seconds")
+        paths = rrt._paths
+        # Check if collision detection was faulty.
+        if len(paths):
+            # Check collision multiple time to avoid any fault.
+            checks = []
+            for _ in range(5):
+                checks.append(collision.is_collision_path(paths[-1]["poses"]))
+            # If there was a fault, repeat one more time.
+            if max(checks):
+                print("Repeating due to error in collision avoidance.")
+                continue
+        break
+    #
+    values_iterations = [(p["value"], p["i"]) for p in rrt._paths]
+    result = {
+        "values_iterations": values_iterations,
+        "tol_cmd": tol_cmd,
+        "goal_bias": goal_bias,
+    }
+    return result
+
+
 def rrt5(
     max_size,
     tol_cmd=1e-2,
@@ -882,6 +949,26 @@ def eval_param_rrt4():
     print(f"The runtime of the test() function is {runtime} seconds")
 
 
+def eval_param_errt4():
+    file_name = "errt41_10000_11"
+    planner = errt4
+    max_size = 10000
+    n = 11
+    params = {"tol_cmd": 1e-2, "goal_bias": 0.05}
+    param_ranges = {
+        "tol_cmd": log_range(-2, 2, 2).tolist() + [20.0, 30.0],
+        "goal_bias": log_range(-2, 0, 2).tolist() + [0.2, 0.3],
+    }
+    start_time = time.time()
+    results = evaluate_from_subprocess(
+        planner, max_size, n=n, file_name=file_name, **param_ranges
+    )
+    end_time = time.time()
+    runtime = end_time - start_time
+    print(results)
+    print(f"The runtime of the test() function is {runtime} seconds")
+
+
 def eval_param_rrt5():
     file_name = "rrt5_10000_11"
     planner = rrt5
@@ -953,6 +1040,13 @@ if __name__ == "__main__":
     f_41c = "rrt41_cmd01_20000_15.json"
     s_41c = "rrts41_cmd01_20000_15.json"
     files_4 = [f_41]
+    # 4 robot experimental.
+    ef_41 = "errt41_10000_11.json"  # 40, 45, ...
+    ef_42 = "errt42_10000_11.json"  # 45, 45, ...
+    ef_43 = "errt43_10000_11.json"  # 50, 45, ...
+    ef_41c = "errt41_cmd01_20000_15.json"
+    es_41c = "errts41_cmd01_20000_15.json"
+    efiles_4 = [ef_41, ef_42, ef_41c, es_41c]
     # 5 robot.
     f_51 = "rrt51_50000_8.json"
     files_5 = [f_51]
