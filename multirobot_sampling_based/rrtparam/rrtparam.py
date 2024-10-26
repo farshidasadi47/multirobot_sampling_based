@@ -957,8 +957,9 @@ if __name__ == "__main__":
     f_51 = "rrt51_50000_8.json"
     files_5 = [f_51]
     # 10 robot.
-    f_101 = "rrt101_100000_7.json"
+    f_101 = "rrt101_100000_10.json"
     f_101c = "rrt101_cmd01_200000_11.json"
+    f_101cg = "rrt_101_cmd01_g04_300000_100.json"
     files_10 = [f_101]
     #
     files = files_10
