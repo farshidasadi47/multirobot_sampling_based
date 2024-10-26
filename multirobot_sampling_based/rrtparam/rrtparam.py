@@ -806,14 +806,14 @@ def plot_box(data, choice, values=True):
     plt.grid(axis="y", linestyle="--", linewidth=0.5)
 
 
-def print_sorted(data):
+def print_sorted(data, sort_by="ns"):
     name = None
     if isinstance(data, str):
         name = data
         # Read data from file.
         with open(data, "r") as file:
             data = json.load(file)
-    inds = np.argsort(data["ns"])[::-1]
+    inds = np.argsort(data[sort_by])[::-1]
     print(f"Reporting {name}")
     print(
         f"{'tol_cmd':<10} {'goal_bias':<10} {'means':<15} {'n':<5} {'minim':<7} {'maxim':<7}"
@@ -966,6 +966,6 @@ if __name__ == "__main__":
         # plot_cmd_bias(file, values=True, log=True)
         # plot_means(file, 1, values=False, log=False, avg=True)
         plot_box(file, 0, values=True)
-        print_sorted(file)
+        print_sorted(file, "means")
         pass
     plt.show()
