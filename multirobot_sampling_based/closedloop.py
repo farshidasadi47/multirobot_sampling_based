@@ -1113,7 +1113,8 @@ class Controller:
             msg += "-" * 79
             finished = True
         else:
-            yield from self.closed_lines(np.zeros(3), start)
+            cmd = [0] * 0
+            yield self.body2magnet([self.theta, 0]), cmd, start, goal, False
             msg = "Plan aborted.\n" + "-" * 79
             finished = False
         return msg, finished
