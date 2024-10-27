@@ -1453,7 +1453,6 @@ def test_simulation():
         title=True,
         boundary=True,
         last_section=True,
-        save=False,
     )
 
 

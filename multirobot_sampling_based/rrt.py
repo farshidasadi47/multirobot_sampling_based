@@ -1637,7 +1637,6 @@ def test_rrt3():
         anim_length=1100,
         boundary=True,
         last_section=True,
-        save=False,
     )
     plt.show()
 
@@ -1704,7 +1703,6 @@ def test_rrt4():
         anim_length=1100,
         boundary=True,
         last_section=True,
-        save=False,
     )
     plt.show()
 
@@ -1764,7 +1762,6 @@ def test_rrt5():
         anim_length=1100,
         boundary=True,
         last_section=True,
-        save=False,
     )
     plt.show()
 
@@ -1895,7 +1892,6 @@ def test_rrt10_big():
         anim_length=1100,
         boundary=True,
         last_section=True,
-        save=False,
     )
     plt.show()
 
@@ -2025,7 +2021,6 @@ def test_rrt10():
         anim_length=1100,
         boundary=True,
         last_section=True,
-        save=False,
     )
     plt.show()
 
