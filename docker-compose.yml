@@ -90,7 +90,7 @@ services:
     extends: overlay
     profiles: [showvideo]
     entrypoint: /ros_entrypoint.sh
-    command: ros2 run multirobot_sampling_based closedloop
+    command: python3 -c "import sys; sys.path.insert(0, 'src/multirobot_sampling_based/multirobot_sampling_based'); from rosclosed import main; main()"
 ########## ROS services and actions ####################################
   # set_idle
   set_idle:
