@@ -283,9 +283,9 @@ class SwarmSpecs:
     def _set_obstacle_scenario(self):
         space_half = [
             np.array(
-                [[-5, -25], [-5, -200], [5, -200], [5, -25]], dtype=float
+                [[-5, -25], [-5, -100], [5, -100], [5, -25]], dtype=float
             ),
-            np.array([[-5, 200], [-5, 25], [5, 25], [5, 200]], dtype=float),
+            np.array([[-5, 100], [-5, 25], [5, 25], [5, 100]], dtype=float),
         ]
         self._scenarios = {
             3: {0: [], 1: space_half},
