@@ -70,6 +70,7 @@ class Localization:
         self._center = None  # (center_x, center_y)
         self._mask_space = None  # Mask for work space.
         # Find workspace if requested.
+        self._raw = raw
         if raw:
             self._roi_frame = (0, 0, self._W, self._H)
             self._roi_space = (0, 0, self._W, self._H)
@@ -289,7 +290,10 @@ class Localization:
 
     def _undistort(self, img):
         # undistort
-        dst = cv2.undistort(img, self._mtx, self._dist, None, self._nmtx)
+        if self._raw:
+            dst = img
+        else:
+            dst = cv2.undistort(img, self._mtx, self._dist, None, self._nmtx)
         return dst
 
     @staticmethod
