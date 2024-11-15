@@ -128,6 +128,11 @@ class Localization:
         hsv_ranges = {}
         if self._fps == 60:
             # For raw format.
+            # Black border
+            border_hsv_ranges = {
+                "lb": [np.array([0, 40, 0], dtype=np.uint8)],
+                "ub": [np.array([179, 255, 85], dtype=np.uint8)],
+            }
             # Black or 'k'
             hsv_ranges["k"] = {
                 "lb": [np.array([0, 40, 0], dtype=np.uint8)],
@@ -160,6 +165,7 @@ class Localization:
                 "ub": [np.array([175, 255, 255], dtype=np.uint8)],
             }
         #
+        self._border_hsv_ranges = border_hsv_ranges
         self._hsv_ranges = hsv_ranges
 
     def save_image(self):
@@ -436,7 +442,7 @@ class Localization:
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             mask = np.zeros(hsv.shape[:2], dtype=np.uint8)
             for lb, ub in zip(
-                self._hsv_ranges["k"]["lb"], self._hsv_ranges["k"]["ub"]
+                self._border_hsv_ranges["lb"], self._border_hsv_ranges["ub"]
             ):
                 mask += cv2.inRange(hsv, lb, ub)
             # Apply morphological transformation to increase robustness.
