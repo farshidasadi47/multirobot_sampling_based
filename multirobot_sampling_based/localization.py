@@ -762,12 +762,12 @@ class Localization:
         # mouse callback function
         def mouse_cb(event, x, y, flags, param):
             nonlocal frame
+            nonlocal hsv
             # Event happens when left mouse key is released.
             if event == cv2.EVENT_LBUTTONUP:
                 # Print HSV color of mouse position.
-                bgr = frame[y : y + 1, x : x + 1]
-                hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV).squeeze()
-                bgr = bgr.squeeze()
+                bgr = frame[y : y + 1, x : x + 1].squeeze()
+                hsv = hsv[y : y + 1, x : x + 1].squeeze()
                 msg = f"Hue: {hsv[0]:3d}, Sat: {hsv[1]:3d}, Val: {hsv[2]:3d}||"
                 msg += f"B: {bgr[0]:3d}, G: {bgr[1]:3d}, R: {bgr[2]:3d}."
                 print(msg)
