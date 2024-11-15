@@ -439,6 +439,9 @@ class Localization:
                 self._hsv_ranges["k"]["lb"], self._hsv_ranges["k"]["ub"]
             ):
                 mask += cv2.inRange(hsv, lb, ub)
+            # Apply morphological transformation to increase robustness.
+            kernel = np.ones((3, 3), np.uint8)
+            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
             # Find the space boundary ractangle among all contours.
             contours, hierarchy = cv2.findContours(
                 mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
@@ -823,6 +826,8 @@ class Localization:
             # Convert to HSV format and color threshold
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             mask = cv2.inRange(hsv, lower, upper)
+            kernel = np.ones((3, 3), np.uint8)
+            mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
             mask_inverted = cv2.bitwise_not(mask)
             mask_inverted = cv2.cvtColor(mask_inverted, cv2.COLOR_GRAY2BGR)
             filterred = cv2.bitwise_and(frame, frame, mask=mask)
