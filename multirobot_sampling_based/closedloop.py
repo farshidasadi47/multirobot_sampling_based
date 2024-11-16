@@ -996,7 +996,7 @@ class Controller:
         std_ratio = np.zeros_like(self.specs.beta)
         std_dx = np.zeros((self.specs.n_robot * 2, self.specs.n_mode))
         var_dx = np.zeros((self.specs.n_robot * 2, self.specs.n_mode))
-        inds = np.where(cmds[:, 2] < 1)[0]
+        inds = np.where(cmds[:, 2] == 0)[0]
         if inds.size > 0:
             avg_ratio[:, 0] = np.mean(ratios[inds], axis=0)[:n_robot]
             std_ratio[:, 0] = np.std(ratios[inds], axis=0)[:n_robot]
