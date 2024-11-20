@@ -1342,21 +1342,26 @@ class RRTS(RRT):
 
     def _try_rewiring(self, ind_i, ind_f, rewiring_near_nodes=False):
         rewired = False
+        not_goal = self._not_goal_mask[ind_f]
         value_past = self._values[ind_f]
         # Obtain mode sequence and depths.
         depth_i = self._depths[ind_i]
         depths, mode_sequence = self._get_depth_mode_sequence(depth_i)
         # Calculate path from nearest to rnd.
+        pose_f = self._poses[ind_f] if not_goal else self._goal
         cmds, poses, depths, mode_sequence = self._steer(
-            self._poses[ind_i], self._poses[ind_f], depths, mode_sequence
+            self._poses[ind_i], pose_f, depths, mode_sequence
         )
         cost = len(cmds)
         if cost < 1:
             return rewired
-        # Check if final pose is within near_pose.
-        if rewiring_near_nodes and (
-            not self._within_pose_tol(poses[-1] - self._poses[ind_f])
-        ):
+        # Check if final pose is within goal or near_pose if needed.
+        if not_goal:
+            if rewiring_near_nodes and (
+                not self._within_pose_tol(poses[-1] - pose_f)
+            ):
+                return rewired
+        elif not self._within_goal(poses[-1]):
             return rewired
         # Check if rewiring improves near_node value.
         value_new = self._values[ind_i] + cost
