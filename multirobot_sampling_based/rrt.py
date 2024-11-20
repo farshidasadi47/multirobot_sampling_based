@@ -986,6 +986,20 @@ class RRT:
         mode_change = np.array([np.cos(ang), np.sin(ang), 0.0])
         mode_change_remainder = np.zeros(3)
         mcmds = []
+        # Do mode change if first nonzero mode of cmds and mode sequence
+        # does not match.
+        mode = np.nonzero(self._basic_mode_sequence)[0][0]
+        mode = self._basic_mode_sequence[mode]
+        next_mode = np.nonzero(cmds[:, -1])[0][0]
+        next_mode = int(cmds[next_mode, -1])
+        if next_mode and next_mode != mode:
+            mode_rel_length = self._specs.mode_rel_length[mode, next_mode]
+            cmd_mode_change = mode_rel_length * mode_change
+            mode_change_remainder += cmd_mode_change
+            mode_change *= -1
+            cmd_mode_change[-1] = -next_mode
+            mcmds.append(cmd_mode_change)
+        #
         for cmd, next_mode in zip(cmds, next_modes):
             mode = int(cmd[-1])
             if mode == 0:
@@ -1013,7 +1027,7 @@ class RRT:
                 mcmds.append(cmd)
                 mcmds.append(cmd_mode_change)
         # Compensate the remainder if necessary.
-        if np.linalg.norm(mode_change_remainder) > 0:
+        if np.linalg.norm(mode_change_remainder) > self._tol_cmd:
             cmd_tumbling = self._accurate_tumbling(-mode_change_remainder)
             mcmds.extend(cmd_tumbling)
         return np.vstack(mcmds)
