@@ -990,8 +990,8 @@ class RRT:
         # does not match.
         mode = np.nonzero(self._basic_mode_sequence)[0][0]
         mode = self._basic_mode_sequence[mode]
-        next_mode = np.nonzero(cmds[:, -1])[0][0]
-        next_mode = int(cmds[next_mode, -1])
+        next_mode = np.nonzero(cmds[:, -1])[0]
+        next_mode = int(cmds[next_mode[0], -1]) if len(next_mode) else 0
         if next_mode and next_mode != mode:
             mode_rel_length = self._specs.mode_rel_length[mode, next_mode]
             cmd_mode_change = mode_rel_length * mode_change
