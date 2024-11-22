@@ -1043,7 +1043,7 @@ class RRT:
                 mcmds.append(cmd)
                 mcmds.append(cmd_mode_change)
         # Compensate the remainder if necessary.
-        if np.linalg.norm(mode_change_remainder) > self._tol_cmd:
+        if np.linalg.norm(mode_change_remainder) > 1.0:
             cmd_tumbling = self._accurate_tumbling(-mode_change_remainder)
             mcmds.extend(cmd_tumbling)
         return np.vstack(mcmds)
