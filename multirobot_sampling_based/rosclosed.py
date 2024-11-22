@@ -1380,14 +1380,6 @@ class ControlNode(NodeTemplate):
                 print("-" * 79)
                 # Get params.
                 params = {}
-                # Get ang_mode_change.
-                user_input = input("Enter angle of mode change: \n")
-                if re.fullmatch(r"[+-]?\d+(\.\d*)?", user_input):
-                    params["ang_mode_change"] = float(user_input)
-                # Get max_size.
-                user_input = input("Enter max size of tree.\n")
-                if re.fullmatch(r"[+]?\d+(\.\d*)?", user_input):
-                    params["max_size"] = int(float(user_input))
                 # Get tol_cmd.
                 user_input = input("Enter tol cmd.\n")
                 if re.fullmatch(r"[+]?\d+(\.\d*)?|\d*\.\d+", user_input):
@@ -1396,10 +1388,18 @@ class ControlNode(NodeTemplate):
                 user_input = input("Enter goal bias.\n")
                 if re.fullmatch(r"[+]?\d+(\.\d*)?|\d*\.\d+", user_input):
                     params["goal_bias"] = float(user_input)
+                # Get max_size.
+                user_input = input("Enter max size of tree.\n")
+                if re.fullmatch(r"[+]?\d+(\.\d*)?", user_input):
+                    params["max_size"] = int(float(user_input))
                 # Get initial feasibility tolerance.
                 user_input = input("Enter initial feasibility tolerance.\n")
                 if re.fullmatch(r"[+]?\d+(\.\d*)?|\d*\.\d+", user_input):
                     params["tol_goal"] = float(user_input)
+                # Get ang_mode_change.
+                user_input = input("Enter angle of mode change: \n")
+                if re.fullmatch(r"[+-]?\d+(\.\d*)?", user_input):
+                    params["ang_mode_change"] = float(user_input)
                 print("Params:")
                 pprint(params)
                 print("-" * 79)
@@ -1456,7 +1456,7 @@ class ControlNode(NodeTemplate):
                             self.publish_field(field)
                             self.rate.sleep()
                     except StopIteration as e:
-                        p_msg , finished = e.value
+                        p_msg, finished = e.value
                         # Get current position
                         field_fb, feedback = self.get_subs_values()
                         state_fb = self.control.process_robots(feedback, False)
