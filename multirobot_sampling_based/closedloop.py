@@ -369,6 +369,8 @@ class Controller:
             yield from self.step_theta(theta_start)
             # Lift the robots.
             yield from self.step_alpha(-dir_pivot * np.pi / 2, self.tumble_inc)
+            # Delay for some moments.
+            yield from [[self.theta, self.alpha] * 3]
             # Update theta and mode, and position.
             self.reset_state(pos=pos_end, theta=theta_end, mode=des_mode)
             # Lift down the robots.
