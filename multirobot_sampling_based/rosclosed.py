@@ -1428,7 +1428,7 @@ class ControlNode(NodeTemplate):
                             from_control = next(iterator)
                             # Get current position
                             field_fb, feedback = self.get_subs_values()
-                            if abs(state[2]) < 0.1:
+                            if abs(state[2]) < 5.0:
                                 state_fb = self.control.process_robots(
                                     feedback, False
                                 )
