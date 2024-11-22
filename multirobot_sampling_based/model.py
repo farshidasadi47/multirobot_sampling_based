@@ -625,7 +625,7 @@ class SwarmSpecs:
 
     @classmethod
     def robo4p(cls):
-        pivot_length = np.array(
+        """pivot_length = np.array(
             [
                 [7.48, 4.91, 4.90, 4.93],
                 [4.95, 4.95, 4.91, 7.59],
@@ -641,8 +641,26 @@ class SwarmSpecs:
                 [3.93, 3.61, 4.85, 5.09, 2.69, 2.12, 4.40, 3.80],
                 [4.11, 3.79, 3.67, 2.96, 4.71, 5.16, 5.07, 4.17],
             ]
+        )"""
+        pivot_length = np.array(
+            [
+                [7.56, 4.96, 4.91, 4.94],
+                [4.89, 4.95, 4.94, 7.58],
+                [4.82, 4.90, 7.54, 4.90],
+                [4.91, 7.64, 4.93, 4.86],
+            ]
         )
-        return cls(pivot_length, 12.55, uncertainty_scaling)
+        uncertainty_scaling = np.array(
+            [
+                [1.78, 2.61, 1.07, 1.39, 1.02, 1.40, 1.16, 1.08],
+                [5.34, 3.20, 3.98, 3.47, 3.93, 3.68, 4.17, 3.74],
+                [4.45, 4.48, 4.24, 3.94, 3.84, 3.74, 2.53, 2.89],
+                [4.78, 3.92, 4.85, 5.09, 2.69, 2.12, 4.40, 3.80],
+                [4.11, 3.79, 3.67, 2.96, 4.71, 5.16, 5.07, 4.17],
+            ]
+        )
+        # return cls(pivot_length, 12.55, uncertainty_scaling)
+        return cls(pivot_length, 12.82, uncertainty_scaling)
 
     @classmethod
     def robo5p(cls):
