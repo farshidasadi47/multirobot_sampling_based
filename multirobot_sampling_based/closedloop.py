@@ -12,6 +12,7 @@ import json
 
 import numpy as np
 from scipy.spatial.transform import Rotation
+from scipy.optimize import linprog
 
 # from "foldername" import filename, this is for ROS compatibility.
 try:
@@ -620,12 +621,76 @@ class Controller:
             for robot in range(n_robot):
                 state = robot_states[robot]
                 if 999 in state:
-                    raise ValueError("One or more robot is missing.")
+                    raise ValueError(f"Robot {robot} is missing.")
                 positions.extend(state[:2])
                 angles.append(state[2])
         # Fix angle to closest one.
         angles = self.modify_angles(angles, self.theta)
         return np.array(positions), angles[0]
+
+    def least_inf_norm(self, xg, xi, B):
+        """
+        Solves the optimization problem:
+            min_u || x_g - x_i - B u ||_inf
+
+        This optimization problem is converted to a linear program (LP)
+        in the following form:
+            min t
+            subject to:
+                -t <= (x_g - x_i)_k - B_k u <= t, for all k = 1, ..., n
+
+        The LP formulation introduces an auxiliary variable t to
+        represent the maximum absolute value of the residual
+        (x_g - x_i - B u). The LP formulation is:
+            Objective:
+                minimize t
+            Variables:
+                u = [u1, u2] (control variables)
+                t (scalar variable)
+            Constraints:
+                (x_g - x_i)_k - B_k u <= t   (upper bound for residual)
+                -(x_g - x_i)_k + [B_k u <= t  (lower bound for residual)
+        ----------
+        Parameters
+        ----------
+            x_g (ndarray): n-dimensional goal vector.
+            x_i (ndarray): n-dimensional initial vector.
+            B (ndarray): n x 2 matrix.
+        ----------
+        Returns
+        ----------
+            u_opt (ndarray): Optimal 2-dimensional control vector.
+        """
+        n, m = B.shape
+        residual = xg - xi
+        # Objective
+        c_lp = np.zeros(m + 1)
+        c_lp[-1] = 1
+        # Constraints
+        A_ub = np.zeros((2 * n, m + 1))
+        b_ub = np.zeros(2 * n)
+        for k in range(n):
+            # First inequality: (residual[k] - B[k]u) <= t
+            A_ub[2 * k, :m] = -B[k]  # Coefficients for u
+            A_ub[2 * k, -1] = -1  # Coefficient for t
+            b_ub[2 * k] = -residual[k]
+            # Second inequality: -(residual[k] - B[k]u) <= t
+            A_ub[2 * k + 1, :m] = B[k]  # Coefficients for u
+            A_ub[2 * k + 1, -1] = -1  # Coefficient for t
+            b_ub[2 * k + 1] = residual[k]
+        # Bounds: No bounds for u, but t >= 0
+        bounds = [(None, None)] * m + [(0, None)]
+        # Solve the linear program
+        result = linprog(
+            c_lp, A_ub=A_ub, b_ub=b_ub, bounds=bounds, method="highs"
+        )
+        if result.success:
+            u_opt = result.x[:m]  # Optimal values for u (u1, u2)
+            return u_opt
+        else:
+            raise ValueError(
+                "Linear programming did not converge: " + result.message
+            )
 
     def closed_pivot_walking_cartesian(self, xg, last=False, average=False):
         """
@@ -643,7 +708,8 @@ class Controller:
             self.reset_state(pos=xi)
             # Calculate equivalent polar command.
             if average:
-                xf = xi + np.dot(B, np.dot(np.linalg.pinv(B), xg - xi))
+                # xf = xi + np.dot(B, np.dot(np.linalg.pinv(B), xg - xi))
+                xf = xi + np.dot(B, self.least_inf_norm(xg, xi, B))
             cmd = self.cart2pol(xf[:2] - xi[:2])
             # Determine walking parameters.
             steps, sweep = self.get_pivot_params(cmd[0], cmd[1])
