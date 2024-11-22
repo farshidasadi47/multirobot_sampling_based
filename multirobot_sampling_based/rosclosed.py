@@ -1314,6 +1314,21 @@ class ControlNode(NodeTemplate):
                 msg = f"xi: [" + ",".join(f"{i:+07.2f}" for i in xi) + "]"
                 msg += f", theta_i: {np.rad2deg(theta_i):+07.2f}"
                 print(msg)
+                # Get initial locations.
+                print(f"Enter goal for {n_robot} robots as x_i, y_i, ... OR")
+                print("Anything else, but q, prompts to use camra feedback OR")
+                print('Enter "q" for quitting.')
+                in_str = input("Enter values: ").strip()
+                # Check if user requests quitting.
+                if re.match("q", in_str) is not None:
+                    print("Exitted action call.")
+                    raise ValueError
+                if re.fullmatch(regex_num, in_str):
+                    xi = list(map(float, re.split(r", *| +", in_str)))
+                    xi = np.array(xi, dtype=float)
+                    msg = f"XI: [" + ",".join(f"{i:+07.2f}" for i in xi) + "]"
+                    print(msg)
+                # Get final positions.
                 print("Enter final positions by coordinate or letter:")
                 print(f"Enter goal for {n_robot} robots as x_i, y_i, ... OR")
                 print(f"Enter list of prespecified letters with steps from")
@@ -1421,7 +1436,7 @@ class ControlNode(NodeTemplate):
                     print(f"XG: [" + ",".join(f"{i:+07.2f}" for i in XG) + "]")
                     # Build planner iterator
                     print("=" * 72)
-                    iterator = self.control.plan(XG, **params)
+                    iterator = self.control.plan(xi, XG, **params)
                     self.rate.sleep()
                     try:
                         while True:

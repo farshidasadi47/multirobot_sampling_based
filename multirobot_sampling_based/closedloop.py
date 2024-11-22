@@ -1110,6 +1110,7 @@ class Controller:
 
     def plan(
         self,
+        start,
         goal,
         ang_mode_change=0,
         max_size=1000,
@@ -1135,56 +1136,69 @@ class Controller:
         ----------
         msg: string for showing statistics of the motion.
         """
-        basic_mode_sequence = deque([0]) + self.mode_sequence
-        np.random.seed(42)  # Keep for consistency, but can be removed.
-        # Make the obstacle and collision object.
-        specs = self.specs
-        obstacles = rrt.Obstacles(specs, specs.obstacle_contours)
-        obstacle_contours = obstacles.get_cartesian_obstacle_contours()
-        mesh, mesh_contours = obstacles.get_obstacle_mesh()
-        collision = rrt.Collision(mesh, specs)
-        # Build planner and find the plan.
-        planner = rrt.RRTS(
-            specs,
-            collision,
-            obstacle_contours,
-            max_size=max_size,
-            tol_cmd=tol_cmd,
-            goal_bias=goal_bias,
-            tol_goal=tol_goal,
-        )
-        # Get the start position.
-        start, _ = yield None
-        start_time = time.time()
-        planner.plans(start, goal, basic_mode_sequence, plot=False)
-        print("-" * 79)
-        end_time = time.time()
-        runtime = end_time - start_time
-        print(f"The runtime of the test() function is {runtime} seconds")
-        print("-" * 79)
-        # Process the command.
-        cmds = planner.post_process(planner.cmds, ang=ang_mode_change)
-        cmds = model.cartesian_to_polar(cmds)  # Convert to polar.
-        # Execute the command.
-        user_input = input('Enter "y" to execute the plan.\n')
-        if re.match("y|Y", user_input):
-            msg, _ = yield from self.closed_lines(cmds, average=True)
-            params = {
-                "max_size": max_size,
-                "tol_cmd": tol_cmd,
-                "goal_bias": goal_bias,
-                "tol_goal": tol_goal,
-                "plan length": planner.best_value,
-            }
-            msg += "\nPlan information:\n"
-            msg += json.dumps(params, indent=4) + "\n"
-            msg += "-" * 79
-            finished = True
-        else:
-            cmd = [0] * 0
-            yield self.body2magnet([self.theta, 0]), cmd, start, goal, False
-            msg = "Plan aborted.\n" + "-" * 79
-            finished = False
+        while True:
+            np.random.seed(42)  # Keep for consistency, but can be removed.
+            basic_mode_sequence = deque([0]) + self.mode_sequence
+            # Make the obstacle and collision object.
+            specs = self.specs
+            obstacles = rrt.Obstacles(specs, specs.obstacle_contours)
+            obstacle_contours = obstacles.get_cartesian_obstacle_contours()
+            mesh, mesh_contours = obstacles.get_obstacle_mesh()
+            collision = rrt.Collision(mesh, specs)
+            # Build planner and find the plan.
+            planner = rrt.RRTS(
+                specs,
+                collision,
+                obstacle_contours,
+                max_size=max_size,
+                tol_cmd=tol_cmd,
+                goal_bias=goal_bias,
+                tol_goal=tol_goal,
+            )
+            start_time = time.time()
+            planner.plans(start, goal, basic_mode_sequence, plot=False)
+            print("-" * 79)
+            end_time = time.time()
+            runtime = end_time - start_time
+            print(f"The runtime of the test() function is {runtime} seconds")
+            print("-" * 79)
+            # Process the command.
+            cmds = planner.post_process(planner.cmds, ang=ang_mode_change)
+            cmds = model.cartesian_to_polar(cmds)  # Convert to polar.
+            print("=" * 79)
+            print(cmds)
+
+            # Execute the command.
+            msg = 'Enter "y" to execute the plan.\n'
+            msg += 'Enter "n" to repeat planning.\n'
+            msg += "Anything else exits the planning.\n"
+            print(msg)
+            user_input = input("Enter request: ").strip()
+            if re.match("y|Y", user_input):
+                msg, _ = yield from self.closed_lines(cmds, average=True)
+                params = {
+                    "max_size": max_size,
+                    "tol_cmd": tol_cmd,
+                    "goal_bias": goal_bias,
+                    "tol_goal": tol_goal,
+                    "plan length": planner.best_value,
+                }
+                msg += "\nPlan information:\n"
+                msg += json.dumps(params, indent=4) + "\n"
+                msg += "-" * 79
+                finished = True
+                break
+            elif re.match("n|N", user_input):
+                print("=" * 79)
+                continue
+            else:
+                cmd = [0] * 0
+                yield self.body2magnet(
+                    [self.theta, 0]
+                ), cmd, start, goal, False
+                msg = "Plan aborted.\n" + "-" * 79
+                finished = False
+                break
         return msg, finished
 
 
