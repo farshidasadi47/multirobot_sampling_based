@@ -7,6 +7,7 @@
 import time
 import re
 from typing import TypedDict
+import logging
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -37,6 +38,18 @@ plt.rcParams["font.family"] = ["serif"]
 plt.rcParams["mathtext.fontset"] = "cm"
 # plt.rcParams["text.usetex"] = False
 plt.rcParams["hatch.linewidth"] = 0.5
+
+# Create a logger
+logger = logging.getLogger("MyLogger")
+logger.setLevel(logging.DEBUG)
+# Create a console (stream) handler and set its level
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+# Create a logging format
+log_formatter = logging.Formatter("%(message)s")
+console_handler.setFormatter(log_formatter)
+# Add handlers to the logger
+logger.addHandler(console_handler)
 
 
 ########## classes and functions #######################################
@@ -834,8 +847,11 @@ class RRT:
 
     def _generate_path(self, ind):
         if self._log:
-            print(f"Number of tree nodes {self._N}, ", end="")
-            print(f"Path value: {self._values[ind]: 10.2f}")
+            msg = (
+                f"Number of tree nodes {self._N}, "
+                + f"Path value: {self._values[ind]: 10.2f}"
+            )
+            logger.debug(msg)
         inds = [ind]
         parent = self._parents[ind]
         while parent > 0:
@@ -1112,7 +1128,7 @@ class RRT:
                     self._draw_nodes(i, axes)
                 i += 1
             if self._log and (not i % 100) and toggle:
-                print(f"iteration = {i:>6d}")
+                logger.debug(f"iteration = {i:>6d}")
                 toggle = False
             #
             if anim_online and plot:
@@ -1517,8 +1533,8 @@ class RRTS(RRT):
                     self._set_arts_info(inds_to_draw)
                     self._draw_nodes(i, axes)
                 i += 1
-            if self._log and (not i % 100) and toggle:
-                print(f"iteration = {i:>6d}")
+            if self._log and (not i % 1000) and toggle:
+                logger.debug(f"iteration = {i:>6d}")
                 toggle = False
             #
             if anim_online and plot:
@@ -1639,7 +1655,7 @@ def test_rrt3():
     rrt.plans(pose_i, pose_f, [0, 1, 2], anim_online=False, plot=True)
     end_time = time.time()
     runtime = end_time - start_time
-    print(f"The runtime of the test() function is {runtime} seconds")
+    logger.debug(f"The runtime of the test() function is {runtime} seconds")
     cmds = model.cartesian_to_polar(rrt.cmds)
     # Run simulation.
     simulation = model.Simulation(specs)
@@ -1699,7 +1715,7 @@ def test_rrt4():
     rrt.plans(pose_i, pose_f, [0, 1, 2, 3, 4], anim_online=False, plot=False)
     end_time = time.time()
     runtime = end_time - start_time
-    print(f"The runtime of the test() function is {runtime} seconds")
+    logger.debug(f"The runtime of the test() function is {runtime} seconds")
     # Process the command.
     cmds = rrt.cmds
     cmds = rrt.post_process(rrt.cmds, ang=240)  # Add mode change.
@@ -1708,7 +1724,7 @@ def test_rrt4():
     simulation = model.Simulation(specs)
     # Simulate the system
     poses, cmds = simulation.simulate(cmds, pose_i)
-    print(
+    logger.debug(
         f"is_collision_path: {collision_mod.is_collision_path(np.vstack(poses[:,0]))}"
     )
     # Draw simulation results.
@@ -1724,6 +1740,64 @@ def test_rrt4():
         last_section=True,
     )
     plt.show()
+
+
+def test_errt4(tol_cmd=15.0, goal_bias=0.09):
+    np.random.seed(42)  # Keep for consistency, but can be removed.
+    # Build specs of robots and obstacles.
+    specs = model.SwarmSpecs.robo(4)
+    specs.set_space(rcoil=90)
+    # Obstacle contours.
+    obstacle_contours = [
+        np.array([[-5, -30], [-5, -100], [5, -100], [5, -30]], dtype=float),
+        np.array([[-5, 100], [-5, 30], [5, 30], [5, 100]], dtype=float),
+    ]
+    obstacles = Obstacles(specs, obstacle_contours)
+    obstacle_contours = obstacles.get_cartesian_obstacle_contours()
+    mesh, mesh_contours = obstacles.get_obstacle_mesh()
+    # Add obstacles to specification.
+    specs.set_obstacles(obstacle_contours=obstacle_contours)
+    collision = Collision(mesh, specs)
+    #
+    pose_i = np.array([40, 45, 40, 15, 40, -15, 40, -45], dtype=float)
+    # pose_i = np.array([-43,40, -43,18, -45,-10, -36,-45], dtype=float)
+    pose_f = np.array([-40, 45, -40, 15, -40, -15, -40, -45], dtype=float)
+    #
+    rrt = RRTS(
+        specs,
+        collision,
+        obstacle_contours,
+        tol_cmd=tol_cmd,
+        goal_bias=goal_bias,
+        max_size=20000,
+    )
+    self = rrt
+    start_time = time.time()
+    rrt.plans(pose_i, pose_f, [0, 1, 2, 3, 4], anim_online=False, plot=False)
+    end_time = time.time()
+    runtime = end_time - start_time
+    logger.debug(f"The runtime of the test() function is {runtime} seconds")
+    """ # Process the command.
+    cmds = rrt.cmds
+    cmds = rrt.post_process(rrt.cmds, ang=10)  # Add mode change.
+    cmds = model.cartesian_to_polar(cmds)  # Convert to polar.
+    # Run simulation.
+    simulation = model.Simulation(specs)
+    # Simulate the system
+    poses, cmds = simulation.simulate(cmds, pose_i)
+    # Draw simulation results.
+    simulation.simplot(
+        step=10,
+        plot_length=1000,
+        boundary=True,
+        last_section=False,
+    ) """
+    """ anim = simulation.simanimation(
+        anim_length=1100,
+        boundary=True,
+        last_section=True,
+    ) """
+    # plt.show()
 
 
 def test_rrt5():
@@ -1764,7 +1838,7 @@ def test_rrt5():
     rrt.plans(pose_i, pose_f, [0, 1, 2, 3, 4], anim_online=False, plot=False)
     end_time = time.time()
     runtime = end_time - start_time
-    print(f"The runtime of the test() function is {runtime} seconds")
+    logger.debug(f"The runtime of the test() function is {runtime} seconds")
     cmds = model.cartesian_to_polar(rrt.cmds)
     # Run simulation.
     simulation = model.Simulation(specs)
@@ -1893,7 +1967,7 @@ def test_rrt10_big():
     rrt.plans(pose_i, pose_f, np.arange(11), anim_online=False, plot=False)
     end_time = time.time()
     runtime = end_time - start_time
-    print(f"The runtime of the test() function is {runtime} seconds")
+    logger.debug(f"The runtime of the test() function is {runtime} seconds")
     cmds = model.cartesian_to_polar(rrt.cmds)
     # Run simulation.
     simulation = model.Simulation(specs)
@@ -2022,7 +2096,7 @@ def test_rrt10():
     rrt.plans(pose_i, pose_f, np.arange(11), anim_online=False, plot=False)
     end_time = time.time()
     runtime = end_time - start_time
-    print(f"The runtime of the test() function is {runtime} seconds")
+    logger.debug(f"The runtime of the test() function is {runtime} seconds")
     cmds = model.cartesian_to_polar(rrt.cmds)
     # Run simulation.
     simulation = model.Simulation(specs)
@@ -2046,9 +2120,12 @@ def test_rrt10():
 
 ########## test section ################################################
 if __name__ == "__main__":
+    # Create a file handler and set its level
+    file_handler = logging.FileHandler("logfile.log", mode="w")
+    file_handler.setLevel(logging.DEBUG)  # Writes logs to file.
+    file_handler.setFormatter(log_formatter)
+    logger.addHandler(file_handler)
     # test_obstacle()
     # test_collision()
     # test_rrt4()
     plt.show()
-
-# %%
