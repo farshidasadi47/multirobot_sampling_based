@@ -62,7 +62,7 @@ class Localization:
         # _roi format: (top_left_x, top_left_y, width, heigth).
         self._roi_undistort = (0, 0, self._W, self._H)
         # Pixel to mm conversion factor, found via find_scale method.
-        self._p2mm = 0.5475215
+        self._p2mm = 0.5711465
         # Space boundary parameters.
         self._roi_frame = None
         self._roi_space = None
