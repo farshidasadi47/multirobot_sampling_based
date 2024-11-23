@@ -25,7 +25,7 @@ const unsigned char DIR1 = 2;
 const unsigned char PWM1 = 3;
 const float m1_correction_factor = 1.0;
 // H bridge 2, big coil, Y axis, A->B is +Y direction.
-// Roboteq sdc1260s, runs at 50.79 Volts.
+// Roboteq sdc1260s, runs at 50.19 Volts.
 const unsigned char DIR2 = 4;
 const unsigned char PWM2 = 5;
 const float m2_correction_factor = 1.0;
@@ -34,7 +34,7 @@ const float m2_correction_factor = 1.0;
 const unsigned char INA3 = 8;
 const unsigned char INB3 = 9;
 const unsigned char PWM3 = 10;
-const float m3_correction_factor = 0.91;
+const float m3_correction_factor = 0.85;
 //
 const float general_correction_factor = 1.0;
 /********* Class defs *************************************************/
