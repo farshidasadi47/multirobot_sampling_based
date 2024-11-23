@@ -1,4 +1,5 @@
 # Costum
+*.log
 *.json
 !devcontainer.json
 *.txt
