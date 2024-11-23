@@ -181,8 +181,8 @@ def errt4(
     specs = model.SwarmSpecs.robo(4)
     # Obstacle contours.
     obstacle_contours = [
-        np.array([[-5, -25], [-5, -100], [5, -100], [5, -25]], dtype=float),
-        np.array([[-5, 100], [-5, 25], [5, 25], [5, 100]], dtype=float),
+        np.array([[-5, -30], [-5, -100], [5, -100], [5, -30]], dtype=float),
+        np.array([[-5, 100], [-5, 30], [5, 30], [5, 100]], dtype=float),
     ]
     obstacles = Obstacles(specs, obstacle_contours)
     obstacle_contours = obstacles.get_cartesian_obstacle_contours()
