@@ -135,14 +135,14 @@ class Localization:
             }
             # Black or 'k'
             hsv_ranges["k"] = {
-                "lb": [np.array([0, 40, 0], dtype=np.uint8)],
-                "ub": [np.array([179, 255, 85], dtype=np.uint8)],
+                "lb": [np.array([30, 0, 0], dtype=np.uint8)],
+                "ub": [np.array([179, 255, 125], dtype=np.uint8)],
             }
             # Red or 'r'
             hsv_ranges["r"] = {
                 "lb": [
-                    np.array([0, 80, 80], dtype=np.uint8),
-                    np.array([175, 120, 80], dtype=np.uint8),
+                    np.array([0, 50, 90], dtype=np.uint8),
+                    np.array([170, 20, 90], dtype=np.uint8),
                 ],
                 "ub": [
                     np.array([20, 255, 255], dtype=np.uint8),
@@ -151,18 +151,18 @@ class Localization:
             }
             # Blue or 'b'
             hsv_ranges["b"] = {
-                "lb": [np.array([90, 60, 100], dtype=np.uint8)],
-                "ub": [np.array([115, 255, 255], dtype=np.uint8)],
+                "lb": [np.array([90, 70, 90], dtype=np.uint8)],
+                "ub": [np.array([115, 255, 240], dtype=np.uint8)],
             }
             # Green or 'g'
             hsv_ranges["lime"] = {
-                "lb": [np.array([35, 50, 80], dtype=np.uint8)],
-                "ub": [np.array([70, 255, 255], dtype=np.uint8)],
+                "lb": [np.array([30, 20, 90], dtype=np.uint8)],
+                "ub": [np.array([80, 255, 255], dtype=np.uint8)],
             }
             # White or 'm'
             hsv_ranges["fuchsia"] = {
                 "lb": [np.array([155, 88, 80], dtype=np.uint8)],
-                "ub": [np.array([175, 255, 255], dtype=np.uint8)],
+                "ub": [np.array([170, 255, 255], dtype=np.uint8)],
             }
         #
         self._border_hsv_ranges = border_hsv_ranges
