@@ -663,6 +663,8 @@ class Localization:
             frame = self._crop(frame, self._roi_frame)
             masked = cv2.bitwise_and(frame, frame, mask=self._mask_space)
             hsv = cv2.cvtColor(masked, cv2.COLOR_BGR2HSV)
+            v = cv2.GaussianBlur(hsv[:, :, -1], (3, 3), 0)
+            hsv[:, :, -1] = v
             # Draw grid if requested.
             if draw_grid:
                 frame = self._draw_grid(frame)
@@ -831,6 +833,9 @@ class Localization:
             upper = np.array([h_max, s_max, v_max])
             # Convert to HSV format and color threshold
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            # Blur v channel.
+            v = cv2.GaussianBlur(hsv[:, :, -1], (3, 3), 0)
+            hsv[:, :, -1] = v
             mask = cv2.inRange(hsv, lower, upper)
             kernel = np.ones((3, 3), np.uint8)
             mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
