@@ -1989,7 +1989,7 @@ def test_rrt10_big():
     plt.show()
 
 
-def test_rrt10():
+def test_rrt10(tol_cmd=0.01, goal_bias=0.12, max_size=200000):
     np.random.seed(42)  # Keep for consistency, but can be removed.
     # Build specs of robots and obstacles.
     specs = model.SwarmSpecs.robo10()
@@ -2088,8 +2088,9 @@ def test_rrt10():
         specs,
         collision,
         obstacle_contours,
-        goal_bias=0.07,
-        max_size=100000,
+        tol_cmd=tol_cmd,
+        goal_bias=goal_bias,
+        max_size=max_size,
     )
     self = rrt
     start_time = time.time()
