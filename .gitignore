@@ -1,4 +1,7 @@
 # Costum
+# Ignore all folders within paper/
+paper/
+*.pdf
 *.log
 *.json
 !devcontainer.json
