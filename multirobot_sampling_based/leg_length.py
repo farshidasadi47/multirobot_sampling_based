@@ -1,7 +1,12 @@
 # %%
+# %%
+########################################################################
+# This files holds some helper functions to choose leg_lengths or
+# velocities.
+# Author: Farshid Asadi, farshidasadi47@yahoo.com
+########## Libraries ###################################################
 import os
-from itertools import combinations, permutations
-from collections import deque
+from itertools import permutations
 import numpy as np
 
 np.random.seed(42)
@@ -9,44 +14,92 @@ np.random.seed(42)
 if os.name == "posix":
     os.system("clear")
 
-root = [3, 2]
-n_mode = 11
-n_robot = 10
-seed = root * 2
 
-if n_mode < 6:
-    combos = list(set(permutations(seed, n_robot)))
-else:
-    combos = np.random.choice(root, (1000, n_robot))
+########## Classes #####################################################
+class Ratio:
+    def __init__(self, n_robot, n_mode, vels, repeatable=True):
+        self._n_robot = n_robot
+        self._n_mode = n_mode
+        self._vels = vels
+        if repeatable:
+            self._rnd = np.random.default_rng(42)
+        else:
+            self._rnd = np.random.default_rng()
+        self._set_combos()
+        self._set_matrices()
+
+    @property
+    def matrices(self):
+        return self._matrices
+
+    def _set_combos(self):
+        # If vels is shorter than number of robots, repeat it.
+        seed = np.unique(self._vels).tolist()
+        if len(seed) < self._n_robot:
+            n_rep = int(self._n_robot // len(seed)) + 1
+        else:
+            n_rep = 2
+        seed = seed * n_rep
+        #
+        if self._n_mode < 6:
+            combos = list(set(permutations(seed, self._n_robot)))
+        else:
+            combos = self._rnd.choice(self._vels, (1000, self._n_robot))
+        self._combos = combos
+
+    def _set_matrices(self):
+        matrices = []
+        for combo in self._combos:
+            # Make aggrergeated B.
+            B = np.ones((1, self._n_robot))
+            for i in range(self._n_mode - 1):
+                B = np.append(B, [combo], axis=0)
+                B[i + 1] = np.roll(B[i + 1], -i)
+            B = B.T
+            # Make beta matrix
+            beta = B / B[0]
+            # If it is controllable add it
+            if np.linalg.matrix_rank(beta) >= self._n_robot:
+                _, e, _ = np.linalg.svd(beta, full_matrices=False)
+                # e = e/e[0]
+                det = e.prod()
+                matrices.append((B, beta, e, det))
+        # Sort the matrices in ascending smallest eigen value.
+        matrices = sorted(matrices, key=lambda x: min(abs(x[2])))
+        self._matrices = matrices
+
+    def print(self):
+        for B, beta, e, det in self._matrices:
+            msg = []
+            # Format beta and B rows
+            for row_beta, row_B in zip(beta, B):
+                beta_str = ", ".join(f"{x:05.2f}" for x in row_beta)
+                B_str = ", ".join(f"{x:05.2f}" for x in row_B)
+                msg.append(f"{beta_str} | {B_str}")
+            # Print det and e
+            det_str = f"det: {det:+010.6f}"
+            e_str = ", ".join(f"{x:05.2f}" for x in e)
+            msg.append(f"{det_str} | {e_str}")
+            print("\n".join(msg))
+            print("*" * 79)
+
+    def get_best(self):
+        # Return best B
+        if len(self._matrices):
+            return self._matrices[-1][0], self._matrices[-1][2]
+        else:
+            return None
 
 
-matrices = []
-for combo in combos:
-    # Make aggrergeated B.
-    B = np.ones((1, n_robot))
-    for i in range(n_mode - 1):
-        B = np.append(B, [combo], axis=0)
-        B[i + 1] = np.roll(B[i + 1], -i)
-    B = B.T
-    # Make beta matrix
-    beta = B / B[0]
-    #
-    if np.linalg.matrix_rank(beta) >= n_robot:
-        _, e, _ = np.linalg.svd(beta, full_matrices=False)
-        # e = e/e[0]
-        det = e.prod()
-        msg = ""
-        for row in np.hstack((B, beta)):
-            msg += ", ".join(f"{i:05.2f}" for i in row[:n_mode]) + " | "
-            msg += ", ".join(f"{i:05.2f}" for i in row[n_mode:]) + "\n"
-        msg = msg[:-1]
-        matrices.append([det, e, msg])
-# Sort based on determinant
-matrices = sorted(matrices, key=lambda x: min(map(abs, x[1])))
-# Print information.
-for matrix in matrices:
-    print(matrix[2])
-    print(f"det: {matrix[0]:+011.6f}| ", end="")
-    print(", ".join(f"{i:05.2f}" for i in matrix[1]))
-    print("*" * 72)
-#
+def test():
+    vels = [3, 2]
+    n_mode = 11
+    n_robot = 10
+    ratios = Ratio(n_robot, n_mode, vels)
+    ratios.print()
+    print(ratios.get_best())
+
+
+########## test section ################################################
+if __name__ == "__main__":
+    test()
