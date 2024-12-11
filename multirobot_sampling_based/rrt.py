@@ -1056,7 +1056,7 @@ class RRT:
         fig_name=None,
         anim_name=None,
         anim_online=False,
-        plot=True,
+        plot=False,
         log=True,
     ):
         # Reset existing tree.
@@ -1457,7 +1457,7 @@ class RRTS(RRT):
         fig_name=None,
         anim_name=None,
         anim_online=False,
-        plot=True,
+        plot=False,
         log=True,
     ):
         # Reset existing tree.
