@@ -1,5 +1,4 @@
 # %%
-# %%
 ########################################################################
 # This files holds some helper functions to choose leg_lengths or
 # velocities.
@@ -17,10 +16,11 @@ if os.name == "posix":
 
 ########## Classes #####################################################
 class Ratio:
-    def __init__(self, n_robot, n_mode, vels, repeatable=True):
+    def __init__(self, n_robot, n_mode, vels, repeatable=True, tumbling=False):
         self._n_robot = n_robot
         self._n_mode = n_mode
         self._vels = vels
+        self._tumbling = tumbling
         if repeatable:
             self._rnd = np.random.default_rng(42)
         else:
@@ -50,11 +50,15 @@ class Ratio:
     def _set_matrices(self):
         matrices = []
         for combo in self._combos:
+            B = np.zeros((self._n_mode, self._n_robot))
+            if self._tumbling:
+                B[0] = 1.0
+                iterator = range(1, self._n_mode)
+            else:
+                iterator = range(0, self._n_mode)
             # Make aggrergeated B.
-            B = np.ones((1, self._n_robot))
-            for i in range(self._n_mode - 1):
-                B = np.append(B, [combo], axis=0)
-                B[i + 1] = np.roll(B[i + 1], -i)
+            for i in iterator:
+                B[i] = np.roll(combo, -i)
             B = B.T
             # Make beta matrix
             beta = B / B[0]
@@ -95,7 +99,7 @@ def test():
     vels = [3, 2]
     n_mode = 11
     n_robot = 10
-    ratios = Ratio(n_robot, n_mode, vels)
+    ratios = Ratio(n_robot, n_mode, vels, tumbling=True)
     ratios.print()
     print(ratios.get_best())
 
