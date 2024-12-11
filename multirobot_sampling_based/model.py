@@ -163,23 +163,50 @@ class SwarmSpecs:
         theta_sweep=np.deg2rad(30),
         alpha_sweep=np.deg2rad(33),
     ):
-        msg = '"pivot_length" should be a 2D numpy array.'
-        assert pivot_length.ndim == 2, msg
-        msg = "Robots should have even number of sides."
-        assert pivot_length.shape[1] % 2 == 0, msg
-        msg = "uncertainty scaling matric should be 2D numpy array."
-        assert uncertainty_scaling.ndim == 2, msg
-        #
-        self.n_mode = pivot_length.shape[1] + 1
-        self.n_robot = pivot_length.shape[0]
-        # Construct leg (tumbling) matrix.
-        self.leg_length = np.hstack(
+        n_robot = len(pivot_length)
+        length = np.hstack(
             (
-                np.ones((self.n_robot, 1)) * tumbling_length,
+                np.ones((n_robot, 1)) * tumbling_length,
                 pivot_length.astype(float),
             )
         )
-        self.tumbling_length = tumbling_length
+        self.set_length(length, uncertainty_scaling)
+        # Plotting and vision markers.
+        define_colors(self)
+        self._colors = list(self._colors.keys())
+        self._cmaps = list(self._cmaps.values())
+        # Experimental execution parameters.
+        self.theta_inc = theta_inc
+        self.alpha_inc = alpha_inc
+        self.rot_inc = rot_inc
+        self.pivot_inc = pivot_inc
+        self.tumble_inc = tumble_inc
+        self.theta_sweep = theta_sweep
+        self.alpha_sweep = alpha_sweep
+        # Data points for letters.
+        self._set_letters()
+        # Set default space.
+        self.set_space(dmin=dmin, clearance=clearance)
+        # Set obstacles.
+        self.set_obstacles(
+            obstacles=obstacles, obstacle_contours=obstacle_contours
+        )
+        self._set_obstacle_scenario()
+
+    def set_length(self, length, uncertainty_scaling=None):
+        msg = '"pivot_length" should be a 2D numpy array.'
+        assert length.ndim == 2, msg
+        msg = "uncertainty scaling matric should be 2D numpy array."
+        if uncertainty_scaling is not None:
+            assert uncertainty_scaling.ndim == 2, msg
+        #
+        self.n_robot, self.n_mode = length.shape
+        # Construct leg (tumbling) matrix.
+        self.leg_length = length
+        self.tumbling_length = length[0, 0]
+        self.uncertainty_scaling = uncertainty_scaling
+        if uncertainty_scaling is None:
+            uncertainty_scaling = np.zeros_like(length)
         self.uncertainty_scaling = uncertainty_scaling
         # Construct displacement ratio matrix.
         self.beta = np.zeros_like(self.leg_length)
@@ -217,27 +244,6 @@ class SwarmSpecs:
             row_len[1:] = np.roll(mode_rel_length, ind)
         # Other parameters.
         self.robot_pairs = list(combinations(range(self.n_robot), 2))
-        # Plotting and vision markers.
-        define_colors(self)
-        self._colors = list(self._colors.keys())
-        self._cmaps = list(self._cmaps.values())
-        # Experimental execution parameters.
-        self.theta_inc = theta_inc
-        self.alpha_inc = alpha_inc
-        self.rot_inc = rot_inc
-        self.pivot_inc = pivot_inc
-        self.tumble_inc = tumble_inc
-        self.theta_sweep = theta_sweep
-        self.alpha_sweep = alpha_sweep
-        # Data points for letters.
-        self._set_letters()
-        # Set default space.
-        self.set_space(dmin=dmin, clearance=clearance)
-        # Set obstacles.
-        self.set_obstacles(
-            obstacles=obstacles, obstacle_contours=obstacle_contours
-        )
-        self._set_obstacle_scenario()
 
     def set_space(
         self,
