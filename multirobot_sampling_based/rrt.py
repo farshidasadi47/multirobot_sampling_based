@@ -1058,6 +1058,7 @@ class RRT:
         anim_online=False,
         plot=False,
         log=True,
+        lazy=False,
     ):
         # Reset existing tree.
         self._log = log
@@ -1133,6 +1134,9 @@ class RRT:
             #
             if anim_online and plot:
                 plt.pause(0.001)
+            # Stop if goal reached andlazy evaluation requested.
+            if goal_reached and lazy:
+                break
 
     def _set_legends_online(self, ax, robot):
         fontsize = 8
@@ -1459,6 +1463,7 @@ class RRTS(RRT):
         anim_online=False,
         plot=False,
         log=True,
+        lazy=False,
     ):
         # Reset existing tree.
         self._log = log
@@ -1539,8 +1544,9 @@ class RRTS(RRT):
             #
             if anim_online and plot:
                 plt.pause(0.001)
-            """ if goal_reached:
-                break """
+            # Stop if goal reached andlazy evaluation requested.
+            if goal_reached and lazy:
+                break
 
 
 def test_obstacle():
