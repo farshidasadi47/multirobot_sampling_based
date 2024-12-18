@@ -147,9 +147,8 @@ class SwarmSpecs:
 
     def __init__(
         self,
-        pivot_length: np.array,
-        tumbling_length,
-        uncertainty_scaling,
+        length: np.array,
+        uncertainty_scaling=None,
         *,
         obstacles=[],
         obstacle_contours=[],
@@ -163,13 +162,6 @@ class SwarmSpecs:
         theta_sweep=np.deg2rad(30),
         alpha_sweep=np.deg2rad(33),
     ):
-        n_robot = len(pivot_length)
-        length = np.hstack(
-            (
-                np.ones((n_robot, 1)) * tumbling_length,
-                pivot_length.astype(float),
-            )
-        )
         self.set_length(length, uncertainty_scaling)
         # Plotting and vision markers.
         define_colors(self)
@@ -202,17 +194,17 @@ class SwarmSpecs:
         #
         self.n_robot, self.n_mode = length.shape
         # Construct leg (tumbling) matrix.
-        self.leg_length = length
+        self.length = length.astype(float)
         self.tumbling_length = length[0, 0]
         self.uncertainty_scaling = uncertainty_scaling
         if uncertainty_scaling is None:
-            uncertainty_scaling = np.zeros_like(length)
+            uncertainty_scaling = np.zeros((self.n_robot, 2 * self.n_mode))
         self.uncertainty_scaling = uncertainty_scaling
         # Construct displacement ratio matrix.
-        self.beta = np.zeros_like(self.leg_length)
-        # beta := pivot_seperation_robot_j/pivot_seperation_robot_0
+        self.beta = np.zeros_like(self.length)
+        # beta := length_robot_j/length_robot_0
         for robot in range(self.n_robot):
-            self.beta[robot] = self.leg_length[robot] / self.leg_length[0]
+            self.beta[robot] = self.length[robot] / self.length[0]
         # Construct joint controllability matrix W from beta.
         self.W = np.kron(self.beta, np.eye(2))
         # Construct control matrix B by reshaping W.
@@ -567,51 +559,56 @@ class SwarmSpecs:
 
     @classmethod
     def robo3(cls):
-        pivot_length = np.array([[9, 7], [7, 5], [5, 9]])
+        length = np.array([[10, 9, 7], [10, 7, 5], [10, 5, 9]])
         uncertainty_scaling = 0.2 * np.ones((3, 2 * 3))
-        return cls(pivot_length, 10, uncertainty_scaling)
+        return cls(length, uncertainty_scaling)
 
     @classmethod
     def robo4(cls):
-        pivot_length = np.array(
-            [[9, 7, 5, 3], [7, 5, 3, 9], [5, 3, 9, 7], [3, 9, 7, 5]]
+        length = np.array(
+            [
+                [10, 9, 7, 5, 3],
+                [10, 7, 5, 3, 9],
+                [10, 5, 3, 9, 7],
+                [10, 3, 9, 7, 5],
+            ]
         )
         uncertainty_scaling = 0.2 * np.ones((5, 2 * 4))
-        return cls(pivot_length, 10, uncertainty_scaling)
+        return cls(length, uncertainty_scaling)
 
     @classmethod
     def robo5(cls):
-        pivot_length = np.array(
+        length = np.array(
             [
-                [10, 6, 8, 6],
-                [6, 8, 6, 10],
-                [8, 6, 10, 10],
-                [6, 10, 10, 6],
-                [10, 10, 6, 8],
+                [10, 10, 6, 8, 6],
+                [10, 6, 8, 6, 10],
+                [10, 8, 6, 10, 10],
+                [10, 6, 10, 10, 6],
+                [10, 10, 10, 6, 8],
             ]
         )
         uncertainty_scaling = 0.2 * np.ones((5, 2 * 5))
-        return cls(pivot_length, 10, uncertainty_scaling)
+        return cls(length, uncertainty_scaling)
 
     @classmethod
     def robo10(cls):
-        pivot_length = np.array(
+        length = np.array(
             [
-                [2, 2, 3, 3, 3, 2, 3, 3, 2, 2],
-                [2, 3, 3, 3, 2, 3, 3, 2, 2, 2],
-                [3, 3, 3, 2, 3, 3, 2, 2, 2, 2],
-                [3, 3, 2, 3, 3, 2, 2, 2, 2, 3],
-                [3, 2, 3, 3, 2, 2, 2, 2, 3, 3],
-                [2, 3, 3, 2, 2, 2, 2, 3, 3, 3],
-                [3, 3, 2, 2, 2, 2, 3, 3, 3, 2],
-                [3, 2, 2, 2, 2, 3, 3, 3, 2, 3],
-                [2, 2, 2, 2, 3, 3, 3, 2, 3, 3],
-                [2, 2, 2, 3, 3, 3, 2, 3, 3, 2],
+                [1, 2, 2, 3, 3, 3, 2, 3, 3, 2, 2],
+                [1, 2, 3, 3, 3, 2, 3, 3, 2, 2, 2],
+                [1, 3, 3, 3, 2, 3, 3, 2, 2, 2, 2],
+                [1, 3, 3, 2, 3, 3, 2, 2, 2, 2, 3],
+                [1, 3, 2, 3, 3, 2, 2, 2, 2, 3, 3],
+                [1, 2, 3, 3, 2, 2, 2, 2, 3, 3, 3],
+                [1, 3, 3, 2, 2, 2, 2, 3, 3, 3, 2],
+                [1, 3, 2, 2, 2, 2, 3, 3, 3, 2, 3],
+                [1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3],
+                [1, 2, 2, 2, 3, 3, 3, 2, 3, 3, 2],
             ],
             dtype=float,
         )
         uncertainty_scaling = np.zeros((11, 10 * 2))
-        specs = cls(pivot_length, 1, uncertainty_scaling)
+        specs = cls(length, uncertainty_scaling)
         specs.set_space(
             lbx=-150,
             ubx=150,
@@ -625,18 +622,20 @@ class SwarmSpecs:
 
     @classmethod
     def robo3p(cls):
-        pivot_length = np.array([[8.46, 6.67], [6.61, 4.75], [4.79, 8.18]])
+        length = np.array(
+            [[11.44, 8.46, 6.67], [11.44, 6.61, 4.75], [11.44, 4.79, 8.18]]
+        )
         uncertainty_scaling = 0.2 * np.ones((3, 2 * 3))
-        return cls(pivot_length, 11.44, uncertainty_scaling)
+        return cls(length, uncertainty_scaling)
 
     @classmethod
     def robo4p(cls):
-        """pivot_length = np.array(
+        """length = np.array(
             [
-                [7.48, 4.91, 4.90, 4.93],
-                [4.95, 4.95, 4.91, 7.59],
-                [4.85, 4.87, 7.42, 4.89],
-                [4.86, 7.44, 4.82, 4.84],
+                [12.55, 7.48, 4.91, 4.90, 4.93],
+                [12.55, 4.95, 4.95, 4.91, 7.59],
+                [12.55, 4.85, 4.87, 7.42, 4.89],
+                [12.55, 4.86, 7.44, 4.82, 4.84],
             ]
         )
         uncertainty_scaling = np.array(
@@ -648,12 +647,12 @@ class SwarmSpecs:
                 [4.11, 3.79, 3.67, 2.96, 4.71, 5.16, 5.07, 4.17],
             ]
         )"""
-        pivot_length = np.array(
+        length = np.array(
             [
-                [7.56, 4.96, 4.91, 4.94],
-                [4.89, 4.95, 4.94, 7.58],
-                [4.82, 4.90, 7.54, 4.90],
-                [4.91, 7.64, 4.93, 4.86],
+                [12.82, 7.56, 4.96, 4.91, 4.94],
+                [12.82, 4.89, 4.95, 4.94, 7.58],
+                [12.82, 4.82, 4.90, 7.54, 4.90],
+                [12.82, 4.91, 7.64, 4.93, 4.86],
             ]
         )
         uncertainty_scaling = np.array(
@@ -665,22 +664,22 @@ class SwarmSpecs:
                 [4.11, 3.79, 3.67, 2.96, 4.71, 5.16, 5.07, 4.17],
             ]
         )
-        # return cls(pivot_length, 12.55, uncertainty_scaling)
-        return cls(pivot_length, 12.82, uncertainty_scaling)
+        # return cls(length, uncertainty_scaling)
+        return cls(length, uncertainty_scaling)
 
     @classmethod
     def robo5p(cls):
-        pivot_length = np.array(
+        length = np.array(
             [
-                [4.80, 8.00, 8.00, 5.00],
-                [7.90, 8.00, 4.90, 5.00],
-                [7.90, 4.90, 4.90, 5.10],
-                [4.90, 4.90, 5.00, 8.00],
-                [4.80, 4.90, 8.10, 8.20],
+                [15.24, 4.80, 8.00, 8.00, 5.00],
+                [15.24, 7.90, 8.00, 4.90, 5.00],
+                [15.24, 7.90, 4.90, 4.90, 5.10],
+                [15.24, 4.90, 4.90, 5.00, 8.00],
+                [15.24, 4.80, 4.90, 8.10, 8.20],
             ]
         )
         uncertainty_scaling = 0.2 * np.ones((5, 2 * 5))
-        return cls(pivot_length, 15.24, uncertainty_scaling)
+        return cls(length, uncertainty_scaling)
 
     @classmethod
     def robo(cls, n_robot):
@@ -926,10 +925,8 @@ class Simulation:
     def _simplot_title(self, ax, i, i_tot, cmd_mode):
         if cmd_mode < 0:
             text = f"Step {i:3d} of {i_tot:3d}, changing to mode {-cmd_mode}"
-        elif cmd_mode < 1:
-            text = f"Step {i:3d} of {i_tot:3d}, tumbling, mode {cmd_mode}"
         else:
-            text = f"Step {i:3d} of {i_tot:3d}, pivot-walking, mode {cmd_mode}"
+            text = f"Step {i:3d} of {i_tot:3d}, moving at mode {cmd_mode}"
         ax.set_title(text, fontsize=self._fs_title, pad=self._fs_title / 3)
 
     def _draw_obstacles(self, ax, circles=True):

@@ -85,7 +85,7 @@ class Controller:
             msg = "Position does not match number of the robots."
             raise ValueError(msg)
         #
-        leg_length = self.specs.leg_length[:, mode] / 2
+        leg_length = self.specs.length[:, mode] / 2
         self.pos = pos.astype(float)
         # Calculate leg positions.
         self.posa = np.zeros_like(self.pos)
@@ -285,7 +285,7 @@ class Controller:
 
     def update_theta(self, theta: float, pivot: str = None):
         theta = self.wrap(theta)
-        leg_length = self.specs.leg_length[:, self.mode]
+        leg_length = self.specs.length[:, self.mode]
         # Leg vector, along +y (robot body frame) axis.
         leg_vect = self.rotz(np.array([0, 1.0, 0]), theta)[:2]
         # Update positions of all robots.
@@ -495,7 +495,7 @@ class Controller:
         Calculates number of steps and sweep angle for pivot walking.
         """
         # Get pivot length of leader robot in current mode.
-        leg_length = self.specs.leg_length[0, self.mode]
+        leg_length = self.specs.length[0, self.mode]
         # Calculate maximum distance the leader can travel in one step.
         d_step_max = leg_length * np.sin(self.theta_sweep)
         # Number of steps takes to do the pivot walk.
