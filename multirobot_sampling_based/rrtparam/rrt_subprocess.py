@@ -20,6 +20,7 @@ except Exception as exc:
     print(type(exc).__name__, exc.args)
 ########## Main code ###################################################
 planners = {
+    "rrtn": rrtparam.rrtn,
     "rrt3": rrtparam.rrt3,
     "rrt4": rrtparam.rrt4,
     "rrt5": rrtparam.rrt5,

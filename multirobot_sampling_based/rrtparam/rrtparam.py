@@ -600,6 +600,91 @@ def rrt10(
     return result
 
 
+def scalability_scenario(length, height, spacing=2.0, dmin=5, clr=5):
+    if height < dmin + 2 * clr:
+        msg = f"Second argument 'height' should be >= {dmin + 2 * clr}."
+        raise ValueError(msg)
+    specs = model.SwarmSpecs(length, None)
+    width = ((specs.n_robot - 1) * dmin + 2 * clr) * spacing
+    specs.set_space(
+        ubx=width / 2,
+        lbx=-width / 2,
+        uby=height / 2,
+        lby=-height / 2,
+        rcoil=(width**2 + height**2) ** 0.5 / 2,
+        dmin=dmin,
+        clearance=clr,
+    )
+    # Calculate start and goal.
+    start = -(specs.n_robot - 1) * dmin * spacing / 2
+    pose_i = np.linspace((start, 0), (-start, 0), specs.n_robot).ravel()
+    pose_f = -pose_i
+    #
+    return specs, pose_i, pose_f
+
+
+def rrtn(
+    max_size,
+    tol_cmd=1e-2,
+    goal_bias=0.05,
+    length=None,
+    height=1000,
+    spacing=2.0,
+    dmin=5,
+    clr=5,
+    **kwargs,
+):
+    np.random.seed()
+    # Build specs of robots and obstacles.
+    length = np.atleast_2d(length)
+    specs, pose_i, pose_f = scalability_scenario(
+        length, height, spacing, dmin, clr
+    )
+    # Obstacle.
+    obstacles = Obstacles(specs, specs.obstacle_contours)
+    mesh, mesh_contours = obstacles.get_obstacle_mesh()
+    # Collision.
+    collision = Collision(mesh, specs, with_coil=False)
+    _ = collision.is_collision(pose_i)
+    #
+    rrt = RRT(
+        specs,
+        collision,
+        specs.obstacle_contours,
+        max_size=max_size,
+        tol_cmd=tol_cmd,
+        goal_bias=goal_bias,
+    )
+    for _ in range(3):
+        start_time = time.time()
+        rrt.plan(pose_i, pose_f, log=False, lazy=True)
+        end_time = time.time()
+        runtime = end_time - start_time
+        print(f"The runtime of the test() function is {runtime} seconds")
+        paths = rrt._paths
+        # Check if collision detection was faulty.
+        if len(paths):
+            # Check collision multiple time to avoid any fault.
+            checks = []
+            for _ in range(5):
+                checks.append(collision.is_collision_path(paths[-1]["poses"]))
+            # If there was a fault, repeat one more time.
+            if max(checks):
+                print("Repeating due to error in collision avoidance.")
+                continue
+        break
+    #
+    values_iterations = [(p["value"], p["i"]) for p in rrt._paths]
+    result = {
+        "values_iterations": values_iterations,
+        "tol_cmd": tol_cmd,
+        "goal_bias": goal_bias,
+        "height": height,
+        "n_robot": specs.n_robot,
+    }
+    return result
+
+
 def write_results(results, file_name):
     file_name += r".json"
     with open(file_name, "w") as file:
