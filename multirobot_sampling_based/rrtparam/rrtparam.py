@@ -30,6 +30,8 @@ except ModuleNotFoundError:
     from rrt import Obstacles, Collision, RRT, RRTS
 
 N_CPU = cpu_count() // 2
+script_dir = os.path.dirname(__file__)
+rrt_subprocess_path = os.path.join(script_dir, "rrt_subprocess.py")
 
 
 ########## classes and functions #######################################
@@ -681,7 +683,7 @@ def evaluate_single_subprocess(planner, max_size, n=10, **params):
             process = subprocess.Popen(
                 [
                     sys.executable,
-                    "rrt_subprocess.py",
+                    rrt_subprocess_path,
                     "--planner_name",
                     planner.__name__,
                     "--max_size",
