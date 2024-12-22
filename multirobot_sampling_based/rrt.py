@@ -1995,7 +1995,7 @@ def test_rrt10_big():
     plt.show()
 
 
-def test_rrt10(tol_cmd=0.01, goal_bias=0.12, max_size=200000):
+def test_rrt10(tol_cmd=0.01, goal_bias=0.07, max_size=200000):
     np.random.seed(42)  # Keep for consistency, but can be removed.
     # Build specs of robots and obstacles.
     specs = model.SwarmSpecs.robo10()
@@ -2100,7 +2100,7 @@ def test_rrt10(tol_cmd=0.01, goal_bias=0.12, max_size=200000):
     )
     self = rrt
     start_time = time.time()
-    rrt.plans(pose_i, pose_f, np.arange(11), anim_online=False, plot=False)
+    rrt.plans(pose_i, pose_f, np.arange(10), anim_online=False, plot=False)
     end_time = time.time()
     runtime = end_time - start_time
     logger.debug(f"The runtime of the test() function is {runtime} seconds")
