@@ -36,7 +36,7 @@ rrt_subprocess_path = os.path.join(script_dir, "rrt_subprocess.py")
 
 ########## classes and functions #######################################
 def rrt3(
-    max_size,
+    max_size=1000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -96,6 +96,7 @@ def rrt3(
     values_iterations = [(p["value"], p["i"]) for p in rrt._paths]
     result = {
         "values_iterations": values_iterations,
+        "max_size": max_size,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -103,7 +104,7 @@ def rrt3(
 
 
 def rrt4(
-    max_size,
+    max_size=1000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -167,6 +168,7 @@ def rrt4(
     values_iterations = [(p["value"], p["i"]) for p in rrt._paths]
     result = {
         "values_iterations": values_iterations,
+        "max_size": max_size,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -174,7 +176,7 @@ def rrt4(
 
 
 def errt4(
-    max_size,
+    max_size=1000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -234,6 +236,7 @@ def errt4(
     values_iterations = [(p["value"], p["i"]) for p in rrt._paths]
     result = {
         "values_iterations": values_iterations,
+        "max_size": max_size,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -241,7 +244,7 @@ def errt4(
 
 
 def rrt5(
-    max_size,
+    max_size=1000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -307,6 +310,7 @@ def rrt5(
     values_iterations = [(p["value"], p["i"]) for p in rrt._paths]
     result = {
         "values_iterations": values_iterations,
+        "max_size": max_size,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -314,7 +318,7 @@ def rrt5(
 
 
 def rrt10big(
-    max_size,
+    max_size=1000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -451,6 +455,7 @@ def rrt10big(
     values_iterations = [(p["value"], p["i"]) for p in rrt._paths]
     result = {
         "values_iterations": values_iterations,
+        "max_size": max_size,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -458,7 +463,7 @@ def rrt10big(
 
 
 def rrt10(
-    max_size,
+    max_size=1000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -594,6 +599,7 @@ def rrt10(
     values_iterations = [(p["value"], p["i"]) for p in rrt._paths]
     result = {
         "values_iterations": values_iterations,
+        "max_size": max_size,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -624,7 +630,7 @@ def scalability_scenario(length, height, spacing=2.0, dmin=5, clr=5):
 
 
 def rrtn(
-    max_size,
+    max_size=1000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     length=None,
@@ -677,6 +683,7 @@ def rrtn(
     values_iterations = [(p["value"], p["i"]) for p in rrt._paths]
     result = {
         "values_iterations": values_iterations,
+        "max_size": max_size,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
         "height": height,
@@ -717,11 +724,11 @@ def get_statistics(data):
     }
 
 
-def evaluate_single(planner, max_size, n=10, **params):
+def evaluate_single(planner, n=10, **params):
     all_values = []
     all_iterations = []
     for _ in range(n):
-        result = planner(max_size, **params)
+        result = planner(**params)
         if len(result["values_iterations"]):
             values_iterations = result.pop("values_iterations")
             values, iterations = list(zip(*values_iterations))
@@ -736,7 +743,7 @@ def evaluate_single(planner, max_size, n=10, **params):
     return result
 
 
-def evaluate(planner, max_size, n=10, file_name=None, **param_ranges):
+def evaluate(planner, n=10, file_name=None, **param_ranges):
     param_names = param_ranges.keys()
     parameters = [
         dict(zip(param_names, combination))
@@ -745,7 +752,7 @@ def evaluate(planner, max_size, n=10, file_name=None, **param_ranges):
     #
     all_results = []
     for params in parameters:
-        result = evaluate_single(planner, max_size, n=n, **params)
+        result = evaluate_single(planner, n=n, **params)
         all_results.append(result)
         print(result)
     # Summarize the results.
@@ -759,7 +766,7 @@ def evaluate(planner, max_size, n=10, file_name=None, **param_ranges):
     return results
 
 
-def evaluate_single_subprocess(planner, max_size, n=10, **params):
+def evaluate_single_subprocess(planner, n=10, **params):
     params_json = json.dumps(params)  # Convert params to JSON string
     results = []
 
@@ -771,8 +778,6 @@ def evaluate_single_subprocess(planner, max_size, n=10, **params):
                     rrt_subprocess_path,
                     "--planner_name",
                     planner.__name__,
-                    "--max_size",
-                    str(max_size),
                     "--params",
                     params_json,
                 ],
@@ -817,9 +822,7 @@ def evaluate_single_subprocess(planner, max_size, n=10, **params):
     return result
 
 
-def evaluate_from_subprocess(
-    planner, max_size, n=10, file_name=None, **param_ranges
-):
+def evaluate_from_subprocess(planner, n=10, file_name=None, **param_ranges):
     param_names = param_ranges.keys()
     parameters = [
         dict(zip(param_names, combination))
@@ -828,7 +831,7 @@ def evaluate_from_subprocess(
     #
     all_results = []
     for params in parameters:
-        result = evaluate_single_subprocess(planner, max_size, n=n, **params)
+        result = evaluate_single_subprocess(planner, n=n, **params)
         all_results.append(result)
         print(result)
     # Summarize the results.
@@ -999,16 +1002,16 @@ def log_range(start, stop, n=1):
 def eval_param_rrt3():
     file_name = "rrt301_5000_11"
     planner = rrt3
-    max_size = 5000
     n = 11
-    params = {"tol_cmd": 1e-2, "goal_bias": 0.05}
+    params = {"max_size": 50000, "tol_cmd": 1e-2, "goal_bias": 0.05}
     param_ranges = {
+        "max_size": [5000],
         "tol_cmd": log_range(-2, 2, 2).tolist() + [20.0, 30.0],
         "goal_bias": log_range(-2, 0, 2).tolist() + [0.2, 0.3],
     }
     start_time = time.time()
     results = evaluate_from_subprocess(
-        planner, max_size, n=n, file_name=file_name, **param_ranges
+        planner, n=n, file_name=file_name, **param_ranges
     )
     end_time = time.time()
     runtime = end_time - start_time
@@ -1019,16 +1022,16 @@ def eval_param_rrt3():
 def eval_param_rrt4():
     file_name = "rrt4_5000_11"
     planner = rrt4
-    max_size = 5000
     n = 11
-    params = {"tol_cmd": 1e-2, "goal_bias": 0.05}
+    params = {"max_size": 5000, "tol_cmd": 1e-2, "goal_bias": 0.05}
     param_ranges = {
+        "max_size": [5000],
         "tol_cmd": log_range(-2, 2, 2).tolist() + [20.0, 30.0],
         "goal_bias": log_range(-2, 0, 2).tolist() + [0.2, 0.3],
     }
     start_time = time.time()
     results = evaluate_from_subprocess(
-        planner, max_size, n=n, file_name=file_name, **param_ranges
+        planner, n=n, file_name=file_name, **param_ranges
     )
     end_time = time.time()
     runtime = end_time - start_time
@@ -1039,16 +1042,16 @@ def eval_param_rrt4():
 def eval_param_errt4():
     file_name = "errt41_10000_11"
     planner = errt4
-    max_size = 10000
     n = 11
-    params = {"tol_cmd": 1e-2, "goal_bias": 0.05}
+    params = {"max_size": 10000, "tol_cmd": 1e-2, "goal_bias": 0.05}
     param_ranges = {
+        "max_size": [10000],
         "tol_cmd": log_range(-2, 2, 2).tolist() + [20.0, 30.0],
         "goal_bias": log_range(-2, 0, 2).tolist() + [0.2, 0.3],
     }
     start_time = time.time()
     results = evaluate_from_subprocess(
-        planner, max_size, n=n, file_name=file_name, **param_ranges
+        planner, n=n, file_name=file_name, **param_ranges
     )
     end_time = time.time()
     runtime = end_time - start_time
@@ -1059,16 +1062,16 @@ def eval_param_errt4():
 def eval_param_rrt5():
     file_name = "rrt5_10000_11"
     planner = rrt5
-    max_size = 10000
     n = 11
-    params = {"tol_cmd": 1e-2, "goal_bias": 0.05}
+    params = {"max_size": 10000, "tol_cmd": 1e-2, "goal_bias": 0.05}
     param_ranges = {
+        "max_size": [10000],
         "tol_cmd": log_range(-2, 2, 2).tolist() + [20.0, 30.0],
         "goal_bias": log_range(-2, 0, 2).tolist() + [0.2, 0.3],
     }
     start_time = time.time()
     results = evaluate_from_subprocess(
-        planner, max_size, n=n, file_name=file_name, **param_ranges
+        planner, n=n, file_name=file_name, **param_ranges
     )
     end_time = time.time()
     runtime = end_time - start_time
@@ -1079,16 +1082,16 @@ def eval_param_rrt5():
 def eval_param_rrt10big():
     file_name = "rrt10_200000_11"
     planner = rrt10big
-    max_size = 200000
     n = 11
-    params = {"tol_cmd": 1e-1, "goal_bias": 1e-3}
+    params = {"max_size": 200000, "tol_cmd": 1e-1, "goal_bias": 1e-3}
     param_ranges = {
+        "max_size": [200000],
         "tol_cmd": log_range(-2, 2, 2).tolist(),
         "goal_bias": log_range(-2, 0, 2).tolist() + [0.2, 0.3],
     }
     start_time = time.time()
     results = evaluate_from_subprocess(
-        planner, max_size, n=n, file_name=file_name, **param_ranges
+        planner, n=n, file_name=file_name, **param_ranges
     )
     end_time = time.time()
     runtime = end_time - start_time
@@ -1099,16 +1102,16 @@ def eval_param_rrt10big():
 def eval_param_rrt10():
     file_name = "rrt10_200000_11"
     planner = rrt10
-    max_size = 200000
     n = 11
-    params = {"tol_cmd": 1e-1, "goal_bias": 1e-3}
+    params = {"max_size": 200000, "tol_cmd": 1e-1, "goal_bias": 1e-3}
     param_ranges = {
+        "max_size": [200000],
         "tol_cmd": [0.01],
         "goal_bias": [0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.11, 0.12],
     }
     start_time = time.time()
     results = evaluate_from_subprocess(
-        planner, max_size, n=n, file_name=file_name, **param_ranges
+        planner, n=n, file_name=file_name, **param_ranges
     )
     end_time = time.time()
     runtime = end_time - start_time

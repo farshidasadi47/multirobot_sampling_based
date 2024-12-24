@@ -102,6 +102,7 @@ def scenario(
 ):
     planner = rrtn
     params = {
+        "max_size": max_size,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
         "length": length.tolist(),
@@ -111,7 +112,7 @@ def scenario(
         "clr": clr,
     }
     start_time = time.time()
-    result = evaluate_single_subprocess(planner, max_size, n=n, **params)
+    result = evaluate_single_subprocess(planner, n=n, **params)
     end_time = time.time()
     runtime = end_time - start_time
     print(f"The runtime is {runtime} seconds")

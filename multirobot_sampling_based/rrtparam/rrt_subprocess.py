@@ -36,12 +36,10 @@ def main():
             description="Evaluate RRT planning for given parameters."
         )
         parser.add_argument("--planner_name", type=str, required=True)
-        parser.add_argument("--max_size", type=int, required=True)
         parser.add_argument("--params", type=str, required=True)
         #
         args = parser.parse_args()
         planner = planners.get(args.planner_name)
-        max_size = args.max_size
         params = json.loads(args.params)
         if planner is None:
             print(
@@ -50,7 +48,7 @@ def main():
             )
             sys.exit(1)
         # Call the planner anf get the results.
-        result = planner(max_size, **params)
+        result = planner(**params)
         # Print the result as JSON
         print(json.dumps(result))
     except Exception as e:
