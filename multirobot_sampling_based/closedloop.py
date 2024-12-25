@@ -1114,6 +1114,7 @@ class Controller:
         goal,
         ang_mode_change=0,
         max_size=1000,
+        max_iter=500000,
         tol_cmd=1e-2,
         goal_bias=0.07,
         tol_goal=1.0,
@@ -1151,6 +1152,7 @@ class Controller:
                 collision,
                 obstacle_contours,
                 max_size=max_size,
+                max_iter=max_iter,
                 tol_cmd=tol_cmd,
                 goal_bias=goal_bias,
                 tol_goal=tol_goal,
@@ -1178,6 +1180,7 @@ class Controller:
                 msg, _ = yield from self.closed_lines(cmds, average=True)
                 params = {
                     "max_size": max_size,
+                    "max_iter": max_iter,
                     "tol_cmd": tol_cmd,
                     "goal_bias": goal_bias,
                     "tol_goal": tol_goal,

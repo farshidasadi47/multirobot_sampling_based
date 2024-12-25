@@ -1407,6 +1407,10 @@ class ControlNode(NodeTemplate):
                 user_input = input("Enter max size of tree.\n")
                 if re.fullmatch(r"[+]?\d+(\.\d*)?", user_input):
                     params["max_size"] = int(float(user_input))
+                # Get max_iterations.
+                user_input = input("Enter max iteration of rrt.\n")
+                if re.fullmatch(r"[+]?\d+(\.\d*)?", user_input):
+                    params["max_iter"] = int(float(user_input))
                 # Get initial feasibility tolerance.
                 user_input = input("Enter initial feasibility tolerance.\n")
                 if re.fullmatch(r"[+]?\d+(\.\d*)?|\d*\.\d+", user_input):

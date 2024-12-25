@@ -519,6 +519,7 @@ class RRT:
         collision,
         obstacle_contours,
         max_size=1000,
+        max_iter=500000,
         tol_cmd=1e-2,
         goal_bias=0.07,
         tol_goal=1e-0,
@@ -546,6 +547,7 @@ class RRT:
             self._T[m + 1] = self._T[m] + specs.B[m + 1] @ specs.K[m + 1]
         # Tree properties.
         self._max_size = max_size
+        self._max_iter = max_iter
         lb, ub = map(np.array, list(zip(*specs.bounds)))
         self._lb = np.tile(lb, specs.n_robot)
         self._ub = np.tile(ub, specs.n_robot)
@@ -1075,8 +1077,9 @@ class RRT:
         if plot:
             fig, axes, cid = self._set_plot_online()
         i = 1
+        n_nodes = 1
         toggle = True
-        while i < self._max_size:
+        while n_nodes < self._max_size and i < self._max_iter:
             # Draw a collision free sample from state space.
             goal_selected, rnd = self._sample_collision_free()
             # Find nearest node
@@ -1126,10 +1129,11 @@ class RRT:
                 # Draw Nodes.
                 if plot:
                     self._set_arts_info(inds_to_draw)
-                    self._draw_nodes(i, axes)
-                i += 1
-            if self._log and (not i % 100) and toggle:
-                logger.debug(f"iteration = {i:>6d}")
+                    self._draw_nodes(n_nodes, axes)
+                n_nodes += 1
+            i += 1
+            if self._log and (not n_nodes % 1000) and toggle:
+                logger.debug(f"# nodes = {n_nodes:> 6d}, iteration = {i:>7d}")
                 toggle = False
             #
             if anim_online and plot:
@@ -1137,6 +1141,8 @@ class RRT:
             # Stop if goal reached andlazy evaluation requested.
             if goal_reached and lazy:
                 break
+        if self._log:
+            logger.debug(f"# nodes = {n_nodes:> 6d}, iteration = {i:>7d}")
 
     def _set_legends_online(self, ax, robot):
         fontsize = 8
@@ -1286,6 +1292,7 @@ class RRTS(RRT):
         collision,
         obstacle_contours,
         max_size=1000,
+        max_iter=500000,
         tol_cmd=1e-2,
         goal_bias=0.07,
         tol_goal=1e-0,
@@ -1295,6 +1302,7 @@ class RRTS(RRT):
             collision,
             obstacle_contours,
             max_size,
+            max_iter,
             tol_cmd,
             goal_bias,
             tol_goal,
@@ -1480,8 +1488,9 @@ class RRTS(RRT):
         if plot:
             fig, axes, cid = self._set_plot_online()
         i = 1
+        n_nodes = 1
         toggle = True
-        while i < self._max_size:
+        while n_nodes < self._max_size and i < self._max_iter:
             # Draw a collision free sample from state space.
             goal_selected, rnd = self._sample_collision_free()
             # Find nearest node
@@ -1536,10 +1545,11 @@ class RRTS(RRT):
                 # Draw Nodes.
                 if plot:
                     self._set_arts_info(inds_to_draw)
-                    self._draw_nodes(i, axes)
-                i += 1
-            if self._log and (not i % 1000) and toggle:
-                logger.debug(f"iteration = {i:>6d}")
+                    self._draw_nodes(n_nodes, axes)
+                n_nodes += 1
+            i += 1
+            if self._log and (not n_nodes % 1000) and toggle:
+                logger.debug(f"# nodes = {n_nodes:> 6d}, iteration = {i:>7d}")
                 toggle = False
             #
             if anim_online and plot:
@@ -1547,6 +1557,8 @@ class RRTS(RRT):
             # Stop if goal reached andlazy evaluation requested.
             if goal_reached and lazy:
                 break
+        if self._log:
+            logger.debug(f"# nodes = {n_nodes:> 6d}, iteration = {i:>7d}")
 
 
 def test_obstacle():

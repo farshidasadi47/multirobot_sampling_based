@@ -3,6 +3,7 @@
 # This files used for studying rrt parameters.
 # This is part of sampling based motion planning for heterogeneous
 # magnetic robots.
+# In this file and its logs, iteration usually means number of nodes.
 # Author: Farshid Asadi, farshidasadi47@yahoo.com
 ########## Libraries ###################################################
 import sys
@@ -37,6 +38,7 @@ rrt_subprocess_path = os.path.join(script_dir, "rrt_subprocess.py")
 ########## classes and functions #######################################
 def rrt3(
     max_size=1000,
+    max_iter=500000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -69,6 +71,7 @@ def rrt3(
         collision,
         obstacle_contours,
         max_size=max_size,
+        max_iter=max_iter,
         tol_cmd=tol_cmd,
         goal_bias=goal_bias,
     )
@@ -97,6 +100,7 @@ def rrt3(
     result = {
         "values_iterations": values_iterations,
         "max_size": max_size,
+        "max_iter": max_iter,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -105,6 +109,7 @@ def rrt3(
 
 def rrt4(
     max_size=1000,
+    max_iter=500000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -136,6 +141,7 @@ def rrt4(
         collision,
         obstacle_contours,
         max_size=max_size,
+        max_iter=max_iter,
         tol_cmd=tol_cmd,
         goal_bias=goal_bias,
     )
@@ -169,6 +175,7 @@ def rrt4(
     result = {
         "values_iterations": values_iterations,
         "max_size": max_size,
+        "max_iter": max_iter,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -177,6 +184,7 @@ def rrt4(
 
 def errt4(
     max_size=1000,
+    max_iter=500000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -204,6 +212,7 @@ def errt4(
         collision,
         obstacle_contours,
         max_size=max_size,
+        max_iter=max_iter,
         tol_cmd=tol_cmd,
         goal_bias=goal_bias,
     )
@@ -237,6 +246,7 @@ def errt4(
     result = {
         "values_iterations": values_iterations,
         "max_size": max_size,
+        "max_iter": max_iter,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -245,6 +255,7 @@ def errt4(
 
 def rrt5(
     max_size=1000,
+    max_iter=500000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -278,6 +289,7 @@ def rrt5(
         collision,
         obstacle_contours,
         max_size=max_size,
+        max_iter=max_iter,
         tol_cmd=tol_cmd,
         goal_bias=goal_bias,
     )
@@ -311,6 +323,7 @@ def rrt5(
     result = {
         "values_iterations": values_iterations,
         "max_size": max_size,
+        "max_iter": max_iter,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -319,6 +332,7 @@ def rrt5(
 
 def rrt10big(
     max_size=1000,
+    max_iter=500000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -423,6 +437,7 @@ def rrt10big(
         collision,
         obstacle_contours,
         max_size=max_size,
+        max_iter=max_iter,
         tol_cmd=tol_cmd,
         goal_bias=goal_bias,
     )
@@ -456,6 +471,7 @@ def rrt10big(
     result = {
         "values_iterations": values_iterations,
         "max_size": max_size,
+        "max_iter": max_iter,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -464,6 +480,7 @@ def rrt10big(
 
 def rrt10(
     max_size=1000,
+    max_iter=500000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     **kwargs,
@@ -567,6 +584,7 @@ def rrt10(
         collision,
         obstacle_contours,
         max_size=max_size,
+        max_iter=max_iter,
         tol_cmd=tol_cmd,
         goal_bias=goal_bias,
     )
@@ -600,6 +618,7 @@ def rrt10(
     result = {
         "values_iterations": values_iterations,
         "max_size": max_size,
+        "max_iter": max_iter,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
     }
@@ -631,6 +650,7 @@ def scalability_scenario(length, height, spacing=2.0, dmin=5, clr=5):
 
 def rrtn(
     max_size=1000,
+    max_iter=500000,
     tol_cmd=1e-2,
     goal_bias=0.05,
     length=None,
@@ -658,6 +678,7 @@ def rrtn(
         collision,
         specs.obstacle_contours,
         max_size=max_size,
+        max_iter=max_iter,
         tol_cmd=tol_cmd,
         goal_bias=goal_bias,
     )
@@ -684,6 +705,7 @@ def rrtn(
     result = {
         "values_iterations": values_iterations,
         "max_size": max_size,
+        "max_iter": max_iter,
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
         "height": height,
