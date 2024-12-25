@@ -254,23 +254,112 @@ def print_vels():
         lengths[n_robot] = best_velocity_combo(n_robot, vels)
 
 
-def plot(filename, figname=None, log=False):
-    fontsize = 32
-    markersize = 12
+def polynomial(x, p):
+    # p[0]*x**(N-1) + p[1]*x**(N-2) + ... + p[N-2]*x + p[N-1]
+    return np.polyval(p, x)
+
+
+def exponential(x, p):
+    a, b, c = p
+    return a * np.exp(b * x) + c
+
+
+def plot_fit_height(filename):
+    # Read data.
+    # Read the data.
+    with open(filename, "r") as file:
+        data = json.load(file)
+    x = np.array([int(k) for k in data.keys()])
+    y = np.array([v["height"] for v in data.values()])
+
+    # Define model parameters.
+    models = {
+        f"{model_degree}": (polynomial, (1,) * (model_degree + 1))
+        for model_degree in range(1, len(x) - 1)
+    }
+    models["e"] = (exponential, (1, 1, 1))
+    # Fit models.
+    fit_results = {}
+    for name, (model, p0) in models.items():
+        try:
+            params, _ = curve_fit(lambda x, *p: model(x, p), x, y, p0=p0)
+            y_fit = model(x, params)
+            rss = np.sum((y - y_fit) ** 2)
+            fit_results[name] = (params, rss)
+        except RuntimeError:
+            fit_results[name] = (None, float("inf"))
+    # Plot each fit in separate figures
+    for name, (params, rss) in fit_results.items():
+        if params is not None:
+            plt.figure(figsize=(10, 6))
+            plt.scatter(x, y, color="black", label="Data")
+            x_fit = np.linspace(min(x), max(x), 200)
+            y_fit = models[name][0](x_fit, params)
+            plt.plot(x_fit, y_fit, label=f"{name} Fit", color="blue")
+
+            # Display error and model name
+            plt.title(f"{name} Model\nError (RSS): {rss:.2f}", fontsize=14)
+            plt.xlabel("X", fontsize=12)
+            plt.ylabel("Y", fontsize=12)
+            plt.legend(fontsize=10)
+            plt.grid(True, linestyle="--", linewidth=0.5)
+    # Plot error vs degree for polynomial models
+    polynomial_errors = {
+        int(name): rss
+        for name, (_, rss) in fit_results.items()
+        if name.isdigit()
+    }
+    plt.figure(figsize=(10, 6))
+    plt.plot(
+        list(polynomial_errors.keys()),
+        list(polynomial_errors.values()),
+        marker="o",
+        linestyle="-",
+        color="red",
+    )
+    plt.title("Error vs Degree of Polynomial", fontsize=14)
+    plt.xlabel("Degree of Polynomial", fontsize=12)
+    plt.ylabel("Error (RSS)", fontsize=12)
+    plt.yscale("log")  # Set y-axis to logarithmic scale
+    plt.grid(True, linestyle="--", linewidth=0.5)
+
+
+def plot_height(filename, dmin=5, figname=None, log=False, fittype=None):
+    fs = 32
+    ms = 12
+    lw = 3
     # Read the data.
     with open(filename, "r") as file:
         data = json.load(file)
     n_robots = np.array([int(k) for k in data.keys()])
-    heights = np.array([v["height"] for v in data.values()])
-    #
+    heights = np.array([v["height"] for v in data.values()]) / dmin
+    # Plot data points and set figure up.
     fig, ax = plt.subplots(layout="constrained")
-    ax.plot(n_robots, heights, c="b", marker="o", markersize=markersize, lw=2)
-    # Set up figure.
+    # ax.plot(n_robots, heights, c="b", marker="o", ms=ms, lw=lw, zorder=4)
+    ax.scatter(n_robots, heights, c="b", marker="o", s=ms**2, zorder=4)
     ax.set_xticks(n_robots)
-    ax.xaxis.set_tick_params(labelsize=fontsize)
-    ax.set_xlabel(r"$\#$ robots", fontsize=fontsize)
-    ax.set_ylabel(r"Workspace height$|_{\mathrm{mm}}$", fontsize=fontsize)
-    ax.yaxis.set_tick_params(labelsize=fontsize)
+    ax.xaxis.set_tick_params(labelsize=fs)
+    ax.set_xlabel(r"$\#$ robots", fontsize=fs)
+    # ax.set_ylabel(r"Workspace height$|_{\mathrm{mm}}$", fontsize=fs)
+    ax.set_ylabel(r"Height / Min. distance", fontsize=fs)
+    ax.yaxis.set_tick_params(labelsize=fs)
+    # Add fit curve if asked.
+    if fittype is not None:
+        x_fit = np.linspace(min(n_robots), max(n_robots), 200)
+        if fittype.isdigit():
+            degree = int(fittype)
+            p0 = (1,) * (degree + 1)
+            model = polynomial
+            label = f"Poly. fit (deg={degree})"
+        elif fittype.lower() == "e":
+            p0 = (1, 1, 1)
+            model = exponential
+            label = "Expo. fit"
+        params, _ = curve_fit(
+            lambda x, *p: model(x, p), n_robots, heights, p0=p0
+        )
+        y_fit = model(x_fit, params)
+        ax.plot(x_fit, y_fit, label=label, color="k", ls="--", lw=lw)
     # Add legend.
     handles, labels = [], []
     handles += [
@@ -280,15 +369,18 @@ def plot(filename, figname=None, log=False):
             ls="",
             markerfacecolor="b",
             marker="o",
-            markersize=markersize,
+            markersize=ms,
         )[0]
     ]
     labels += ["Data point"]
+    if fittype is not None:
+        handles.append(plt.Line2D([0], [0], color="k", ls="--", lw=lw))
+        labels.append(label)
     ax.legend(
         handles=handles,
         labels=labels,
         handler_map={tuple: HandlerTuple(ndivide=None)},
-        fontsize=fontsize,
+        fontsize=fs,
         framealpha=0.8,
         facecolor="w",
         handletextpad=0.01,
@@ -334,5 +426,6 @@ def test_height():
 ########## test section ################################################
 if __name__ == "__main__":
     # test()
-    # plot("scalability_height.json", "scalability_height")
+    # plot_height("scalability_height.json", figname="scalability_height")
+    # plot_fit_height("scalability_height.json")
     plt.show()
