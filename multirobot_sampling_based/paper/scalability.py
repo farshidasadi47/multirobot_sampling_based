@@ -92,6 +92,7 @@ def print_result(result):
 def scenario(
     length,
     height,
+    width,
     max_size=1000,
     max_iter=500000,
     tol_cmd=1e-2,
@@ -109,6 +110,7 @@ def scenario(
         "goal_bias": goal_bias,
         "length": length.tolist(),
         "height": height,
+        "width": width,
         "spacing": spacing,
         "dmin": dmin,
         "clr": clr,
@@ -127,6 +129,7 @@ def solve_scenario(
     length,
     height_lb=15,
     height_ub=1000,
+    width=1000,
     threshold=0.9,
     max_size=1000,
     max_iter=500000,
@@ -158,6 +161,7 @@ def solve_scenario(
         result = scenario(
             length,
             height,
+            width,
             max_size=max_size,
             max_iter=max_iter,
             tol_cmd=tol_cmd,
@@ -218,6 +222,7 @@ def find_heights(
             height_ub=((n_robot - 1) * dmin + 2 * clr)
             * spacing
             * height_ub_mult,
+            width=((n_robot - 1) * dmin + 2 * clr) * spacing,
             threshold=threshold,
             max_size=max_size,
             max_iter=max_iter,

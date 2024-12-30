@@ -625,12 +625,16 @@ def rrt10(
     return result
 
 
-def scalability_scenario(length, height, spacing=2.0, dmin=5, clr=5):
+def scalability_scenario(length, height, width, spacing=2.0, dmin=5, clr=5):
     if height < dmin + 2 * clr:
         msg = f"Second argument 'height' should be >= {dmin + 2 * clr}."
         raise ValueError(msg)
     specs = model.SwarmSpecs(length, None)
-    width = ((specs.n_robot - 1) * dmin + 2 * clr) * spacing
+    if width < (specs.n_robot - 1) * dmin * spacing + 2 * clr:
+        msg = (
+            f"Third argument width should be >= "
+            + f"{(specs.n_robot - 1) * dmin * spacing + 2 * clr}"
+        )
     specs.set_space(
         ubx=width / 2,
         lbx=-width / 2,
@@ -655,6 +659,7 @@ def rrtn(
     goal_bias=0.05,
     length=None,
     height=1000,
+    width=1000,
     spacing=2.0,
     dmin=5,
     clr=5,
@@ -664,7 +669,7 @@ def rrtn(
     # Build specs of robots and obstacles.
     length = np.atleast_2d(length)
     specs, pose_i, pose_f = scalability_scenario(
-        length, height, spacing, dmin, clr
+        length, height, width, spacing, dmin, clr
     )
     # Obstacle.
     obstacles = Obstacles(specs, specs.obstacle_contours)
@@ -709,6 +714,7 @@ def rrtn(
         "tol_cmd": tol_cmd,
         "goal_bias": goal_bias,
         "height": height,
+        "width": width,
         "n_robot": specs.n_robot,
     }
     return result
