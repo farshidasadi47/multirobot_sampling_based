@@ -48,7 +48,7 @@ def best_velocity_combo(n_robot, vels):
     length, eig = ratios.get_best()
     if abs(eig).min() < 1e-2:
         raise ValueError("Eigen value < 0.01, change velocities.")
-    print(f"{length}\n{eig}")
+    print(f"{length}\n{np.prod(eig)} | {eig} ")
     return length, eig
 
 
@@ -252,6 +252,56 @@ def find_heights(
     return results
 
 
+def find_iterations(
+    n_robots,
+    vels,
+    height_ratio=0.75,
+    max_size=200000,
+    max_iter=1000000,
+    tol_cmd=1e-2,
+    goal_bias=0.05,
+    spacing=1.0,
+    dmin=5,
+    clr=5,
+    n=10,
+    filename=None,
+):
+    n_robots.sort()
+    results = {}
+    for n_robot in n_robots:
+        length, _ = best_velocity_combo(n_robot, vels)
+        height = ((n_robot - 1) * dmin + 2 * clr) * spacing * height_ratio
+        width = ((n_robot - 1) * dmin + 2 * clr) * spacing
+        print("*" * 39)
+        print(f"height: {height:>7.2f}, width: {width:>7.2f}")
+        result = scenario(
+            length,
+            height,
+            width,
+            max_size=max_size,
+            max_iter=max_iter,
+            tol_cmd=tol_cmd,
+            goal_bias=goal_bias,
+            spacing=spacing,
+            dmin=dmin,
+            clr=clr,
+            n=n,
+        )
+        results[n_robot] = {
+            "imean": result["imean"],
+            "istd": result["istd"],
+            "success_ratio": result["success_ratio"],
+            "result": result,
+        }
+        print(results[n_robot])
+    # Write results if requested.
+    if filename is not None:
+        filename += r".json"
+        with open(filename, "w") as file:
+            json.dump(results, file, indent=4)
+    return results
+
+
 def print_vels():
     vels = [1, 2]
     lengths = {}
@@ -269,13 +319,15 @@ def exponential(x, p):
     return a * np.exp(b * x) + c
 
 
-def plot_fit_height(filename):
-    # Read data.
+def plot_fit(filename, height=True):
+    datakey = "imean"
+    if height:
+        datakey = "height"
     # Read the data.
     with open(filename, "r") as file:
         data = json.load(file)
     x = np.array([int(k) for k in data.keys()])
-    y = np.array([v["height"] for v in data.values()])
+    y = np.array([v[datakey] for v in data.values()])
 
     # Define model parameters.
     models = {
@@ -301,7 +353,6 @@ def plot_fit_height(filename):
             x_fit = np.linspace(min(x), max(x), 200)
             y_fit = models[name][0](x_fit, params)
             plt.plot(x_fit, y_fit, label=f"{name} Fit", color="blue")
-
             # Display error and model name
             plt.title(f"{name} Model\nError (RSS): {rss:.2f}", fontsize=14)
             plt.xlabel("X", fontsize=12)
@@ -329,24 +380,30 @@ def plot_fit_height(filename):
     plt.grid(True, linestyle="--", linewidth=0.5)
 
 
-def plot_height(filename, dmin=5, figname=None, log=False, fittype=None):
+def plot(filename, save=False, height=True, dmin=5, log=False, fittype=None):
     fs = 32
     ms = 12
     lw = 3
     # Read the data.
     with open(filename, "r") as file:
         data = json.load(file)
+    #
+    if height:
+        ydata = np.array([v["height"] for v in data.values()]) / dmin
+        ylabel = r"Height / Min. distance"
+    else:
+        ylabel = r"Min. Iterations"
+        ydata = np.array([v["imean"] for v in data.values()])
     n_robots = np.array([int(k) for k in data.keys()])
-    heights = np.array([v["height"] for v in data.values()]) / dmin
     # Plot data points and set figure up.
     fig, ax = plt.subplots(layout="constrained")
     # ax.plot(n_robots, heights, c="b", marker="o", ms=ms, lw=lw, zorder=4)
-    ax.scatter(n_robots, heights, c="b", marker="o", s=ms**2, zorder=4)
+    ax.scatter(n_robots, ydata, c="b", marker="o", s=ms**2, zorder=4)
     ax.set_xticks(n_robots)
     ax.xaxis.set_tick_params(labelsize=fs)
     ax.set_xlabel(r"$\#$ robots", fontsize=fs)
     # ax.set_ylabel(r"Workspace height$|_{\mathrm{mm}}$", fontsize=fs)
-    ax.set_ylabel(r"Height / Min. distance", fontsize=fs)
+    ax.set_ylabel(ylabel, fontsize=fs)
     ax.yaxis.set_tick_params(labelsize=fs)
     # Add fit curve if asked.
     if fittype is not None:
@@ -361,7 +418,7 @@ def plot_height(filename, dmin=5, figname=None, log=False, fittype=None):
             model = exponential
             label = "Expo. fit"
         params, _ = curve_fit(
-            lambda x, *p: model(x, p), n_robots, heights, p0=p0
+            lambda x, *p: model(x, p), n_robots, ydata, p0=p0
         )
         y_fit = model(x_fit, params)
         ax.plot(x_fit, y_fit, label=label, color="k", ls="--", lw=lw)
@@ -394,8 +451,10 @@ def plot_height(filename, dmin=5, figname=None, log=False, fittype=None):
         borderaxespad=0.2,
         loc="upper left",
     )
-    if figname is not None:
-        fig_name = os.path.join(os.getcwd(), f"{figname}.pdf")
+    if log:
+        ax.set_yscale("log")  # Set the y-axis to logarithmic scale.
+    if save:
+        fig_name = os.path.join(os.getcwd(), filename.replace("json", "pdf"))
         fig.savefig(fig_name, bbox_inches="tight", pad_inches=0.05)
     return fig, ax
 
@@ -428,9 +487,36 @@ def test_height():
     print(f"The total runtime is {runtime} seconds.")
 
 
+def test_iteration():
+    n_robots = [3, 4, 5, 6, 7, 8, 9, 10, 11]
+    vels = [2, 3]
+    filename = "scalability_iteration"
+    start_time = time.time()
+    find_iterations(
+        n_robots,
+        vels,
+        height_ratio=1.0,
+        max_size=600000,
+        max_iter=1200000,
+        tol_cmd=1e-2,
+        goal_bias=0.05,
+        spacing=1.5,
+        dmin=5,
+        clr=5,
+        n=30,
+        filename=filename,
+    )
+    end_time = time.time()
+    runtime = end_time - start_time
+    print(f"The total runtime is {runtime} seconds.")
+
+
 ########## test section ################################################
 if __name__ == "__main__":
-    # test()
-    # plot_height("scalability_height.json", figname="scalability_height")
-    # plot_fit_height("scalability_height.json")
+    # test_height()
+    # plot("scalability_height.json", save=True, fittype="e")
+    # plot_fit("scalability_height.json")
+    # test_iteration()
+    # plot("scalability_iteration.json", save=True, height=False, log=True)
+    # plot_fit("scalability_iteration.json", height=False)
     plt.show()
