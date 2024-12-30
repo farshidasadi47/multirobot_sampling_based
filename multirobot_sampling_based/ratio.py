@@ -68,8 +68,10 @@ class Ratio:
                 # e = e/e[0]
                 det = e.prod()
                 matrices.append((B, beta, e, det))
-        # Sort the matrices in ascending smallest eigen value.
-        matrices = sorted(matrices, key=lambda x: min(abs(x[2])))
+        # Sort matrices based on ascending determinent and eigen values.
+        matrices = sorted(
+            matrices, key=lambda x: (abs(x[3]), *sorted(abs(x[2])))
+        )
         self._matrices = matrices
 
     def print(self):
@@ -97,9 +99,9 @@ class Ratio:
 
 def test():
     vels = [3, 2]
-    n_mode = 11
+    n_mode = 10
     n_robot = 10
-    ratios = Ratio(n_robot, n_mode, vels, tumbling=True)
+    ratios = Ratio(n_robot, n_mode, vels, tumbling=False)
     ratios.print()
     print(ratios.get_best())
 
