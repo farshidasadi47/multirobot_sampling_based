@@ -1309,7 +1309,7 @@ class RRTS(RRT):
         )
         self._ndim = 2 * self._specs.n_robot  # Space dimension.
         self._k_s = 2 * np.exp(1)
-        self._eps = 0.99  # Improvement threshold.
+        self._eps = 0.1  # Improvement threshold.
 
     def _k_nearest_neighbor(self, ind):
         pose = self._poses[ind]
@@ -1393,7 +1393,7 @@ class RRTS(RRT):
             return rewired
         # Check if rewiring improves near_node value.
         value_new = self._values[ind_i] + cost
-        if not (value_new < value_past * self._eps):
+        if not (value_new < value_past - self._eps):
             return rewired
         # Check path for collision and remove colliding parts.
         if self._collision.is_collision_path(poses):
@@ -1424,7 +1424,7 @@ class RRTS(RRT):
         rewiring_costs = self._cost(dposes)
         rewired_values = self._values[near_inds] + rewiring_costs
         # Filter based on estimated value.
-        candidate_inds = np.where(rewired_values < new_value * self._eps)
+        candidate_inds = np.nonzero(rewired_values < new_value - self._eps)
         dposes = dposes[candidate_inds]
         distances = self._distance(dposes)
         rewiring_costs = rewiring_costs[candidate_inds]
@@ -1449,7 +1449,7 @@ class RRTS(RRT):
         dposes = new_pose - near_poses
         rewiring_costs = self._cost(dposes)
         rewired_values = self._values[new_ind] + rewiring_costs
-        candidate_inds = np.where(rewired_values < near_values * self._eps)
+        candidate_inds = np.nonzero(rewired_values < near_values - self._eps)
         candidate_inds = near_inds[candidate_inds]
         # Try rewiring.
         rewired_inds = []
@@ -2007,7 +2007,7 @@ def test_rrt10_big():
     plt.show()
 
 
-def test_rrt10(tol_cmd=0.01, goal_bias=0.11, max_size=200000):
+def test_rrt10(tol_cmd=0.01, goal_bias=0.04, max_size=200000):
     np.random.seed(42)  # Keep for consistency, but can be removed.
     # Build specs of robots and obstacles.
     specs = model.SwarmSpecs.robo10()
