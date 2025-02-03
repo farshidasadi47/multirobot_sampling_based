@@ -730,13 +730,14 @@ def get_statistics(data):
     means, stds, imeans, istds, ns = [], [], [], [], []
     for value, iteration in zip(data["values"], data["iterations"]):
         value = np.array(value)
+        iteration = np.array(iteration)
         mask = value > -1
         n = np.sum(value > -1).item()
         if n > 0:
             means.append(np.mean(value[mask]))
             stds.append(np.std(value[mask]))
-            imeans.append(np.mean(iteration))
-            istds.append(np.std(iteration))
+            imeans.append(np.mean(iteration[mask]))
+            istds.append(np.std(iteration[mask]))
         else:
             means.append(-1)
             stds.append(0)
