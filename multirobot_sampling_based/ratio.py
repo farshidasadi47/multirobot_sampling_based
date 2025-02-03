@@ -98,7 +98,7 @@ class Ratio:
 
 
 def test():
-    vels = [3, 2]
+    vels = [2, 1]
     n_mode = 10
     n_robot = 10
     ratios = Ratio(n_robot, n_mode, vels, tumbling=False)

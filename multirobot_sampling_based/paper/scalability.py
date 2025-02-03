@@ -461,7 +461,7 @@ def plot(filename, save=False, height=True, dmin=5, log=False, fittype=None):
 
 def test_height():
     n_robots = [3, 4, 5, 6, 7, 8, 9, 10, 11]
-    vels = [2, 3]
+    vels = [2, 1]
     filename = "scalability_height"
     start_time = time.time()
     find_heights(
@@ -489,7 +489,7 @@ def test_height():
 
 def test_iteration():
     n_robots = [3, 4, 5, 6, 7, 8, 9, 10, 11]
-    vels = [2, 3]
+    vels = [2, 1]
     filename = "scalability_iteration"
     start_time = time.time()
     find_iterations(
