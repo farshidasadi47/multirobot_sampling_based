@@ -1418,38 +1418,20 @@ class RRTS(RRT):
 
     def _rewire_new_node(self, near_inds, new_ind):
         new_value = self._values[new_ind]
-        new_pose = self._poses[new_ind]
-        near_poses = self._poses[near_inds]
-        dposes = new_pose - near_poses
-        rewiring_costs = self._cost(dposes)
-        rewired_values = self._values[near_inds] + rewiring_costs
-        # Filter based on estimated value.
-        candidate_inds = np.nonzero(rewired_values < new_value - self._eps)
-        dposes = dposes[candidate_inds]
-        distances = self._distance(dposes)
-        rewiring_costs = rewiring_costs[candidate_inds]
-        rewired_values = rewired_values[candidate_inds]
-        candidate_inds = near_inds[candidate_inds]
-        # Sort based on the estimated value.
-        candidate_inds, rewired_values, rewiring_costs = self._sort_inds(
-            candidate_inds, rewired_values, rewiring_costs, distances
+        candidate_inds = np.nonzero(
+            self._values[near_inds] < new_value - self._eps - 1
         )
+        candidate_inds = near_inds[candidate_inds]
         for ind in candidate_inds:
             rewired = self._try_rewiring(
                 ind, new_ind, rewiring_near_nodes=False
             )
-            if rewired:
-                break
 
     def _rewire_near_nodes(self, new_ind, near_inds):
-        # Remove indices with higher rewired_values.
-        new_pose = self._poses[new_ind]
         near_values = self._values[near_inds]
-        near_poses = self._poses[near_inds]
-        dposes = new_pose - near_poses
-        rewiring_costs = self._cost(dposes)
-        rewired_values = self._values[new_ind] + rewiring_costs
-        candidate_inds = np.nonzero(rewired_values < near_values - self._eps)
+        candidate_inds = np.nonzero(
+            self._values[new_ind] < near_values - self._eps - 1
+        )
         candidate_inds = near_inds[candidate_inds]
         # Try rewiring.
         rewired_inds = []
@@ -1760,7 +1742,7 @@ def test_rrt4():
     plt.show()
 
 
-def test_errt4(tol_cmd=15.0, goal_bias=0.09):
+def test_errt4(tol_cmd=11.0, goal_bias=0.14):
     np.random.seed(42)  # Keep for consistency, but can be removed.
     # Build specs of robots and obstacles.
     specs = model.SwarmSpecs.robo(4)
