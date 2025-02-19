@@ -330,154 +330,6 @@ def rrt5(
     return result
 
 
-def rrt10big(
-    max_size=1000,
-    max_iter=500000,
-    tol_cmd=1e-2,
-    goal_bias=0.05,
-    **kwargs,
-):
-    np.random.seed()
-    # Build specs of robots and obstacles.
-    specs = model.SwarmSpecs.robo10()
-    specs.set_space(lbx=-200, ubx=200, lby=-150, uby=150, rcoil=300)
-    # Obstacle contours.
-    obstacle_contours = [
-        np.array([[-75, 5], [-75, -200], [-65, -200], [-65, 5]], dtype=float),
-        np.array([[65, 200], [65, -5], [75, -5], [75, 200]], dtype=float),
-    ]
-    obstacles = Obstacles(specs, obstacle_contours)
-    obstacle_contours = obstacles.get_cartesian_obstacle_contours()
-    mesh, mesh_contours = obstacles.get_obstacle_mesh()
-    # Add obstacles to specification.
-    specs.set_obstacles(obstacle_contours=obstacle_contours)
-
-    collision = Collision(mesh, specs, with_coil=False)
-    pose = np.array(
-        [
-            140,
-            75,
-            140,
-            70,
-            140,
-            60,
-            140,
-            50,
-            140,
-            40,
-            140,
-            30,
-            140,
-            20,
-            140,
-            10,
-            140,
-            0,
-            140,
-            -10,
-        ],
-        dtype=float,
-    )
-    _ = collision.is_collision(pose)
-
-    N = 100
-    pose_i = np.array(
-        [
-            140,
-            90,
-            140,
-            70,
-            140,
-            50,
-            140,
-            30,
-            140,
-            10,
-            140,
-            -10,
-            140,
-            -30,
-            140,
-            -50,
-            140,
-            -70,
-            140,
-            -90,
-        ],
-        dtype=float,
-    )
-    pose_f = np.array(
-        [
-            -140,
-            90,
-            -140,
-            70,
-            -140,
-            50,
-            -140,
-            30,
-            -140,
-            10,
-            -140,
-            -10,
-            -140,
-            -30,
-            -140,
-            -50,
-            -140,
-            -70,
-            -140,
-            -90,
-        ],
-        dtype=float,
-    )
-
-    rrt = RRT(
-        specs,
-        collision,
-        obstacle_contours,
-        max_size=max_size,
-        max_iter=max_iter,
-        tol_cmd=tol_cmd,
-        goal_bias=goal_bias,
-    )
-    for _ in range(3):
-        start_time = time.time()
-        rrt.plan(
-            pose_i,
-            pose_f,
-            np.arange(11),
-            anim_online=False,
-            plot=False,
-            log=False,
-        )
-        end_time = time.time()
-        runtime = end_time - start_time
-        print(f"The runtime of the test() function is {runtime} seconds")
-        paths = rrt._paths
-        # Check if collision detection was faulty.
-        if len(paths):
-            # Check collision multiple time to avoid any fault.
-            checks = []
-            for _ in range(5):
-                checks.append(collision.is_collision_path(paths[-1]["poses"]))
-            # If there was a fault, repeat one more time.
-            if max(checks):
-                print("Repeating due to error in collision avoidance.")
-                continue
-        break
-    #
-    values_iterations = [(p["value"], p["i"]) for p in rrt._paths]
-    result = {
-        "values_iterations": values_iterations,
-        "max_size": max_size,
-        "max_iter": max_iter,
-        "tol_cmd": tol_cmd,
-        "goal_bias": goal_bias,
-    }
-    return result
-
-
 def rrt10(
     max_size=1000,
     max_iter=500000,
@@ -1150,29 +1002,15 @@ def eval_param_rrt10():
 
 ########## test section ################################################
 if __name__ == "__main__":
-    # 3 robot.
-    f_31 = "rrt31_5000_15.json"
-    s_31 = "rrts31_5000_15.json"
-    files_3 = [f_31, s_31]
-    # 4 robot.
-    f_41 = "rrt41_5000_8.json"
-    f_41c = "rrt41_cmd01_20000_15.json"
-    s_41c = "rrts41_cmd01_20000_15.json"
-    files_4 = [f_41]
     # 4 robot experimental.
     ef_41 = "errt41_10000_11.json"  # 40, 45, ...
-    ef_42 = "errt42_10000_11.json"  # 45, 45, ...
-    ef_43 = "errt43_10000_11.json"  # 50, 45, ...
     ef_41c = "errt41_cmd01_20000_15.json"
-    es_41c = "errts41_cmd01_20000_15.json"
-    efiles_4 = [ef_41, ef_42, ef_41c, es_41c]
-    # 5 robot.
-    f_51 = "rrt51_50000_8.json"
-    files_5 = [f_51]
+    es_41cg = "errts41_15cmd_g09_20000_100.json"
+    efiles_4 = [ef_41, ef_41c, es_41cg]
     # 10 robot.
     f_101 = "rrt101_100000_10.json"
     f_101c = "rrt101_cmd01_200000_11.json"
-    f_101cg = "rrt_101_cmd01_g04_300000_100.json"
+    s_101cg = "rrts101_cmd01_g04_100000_100.json"
     files_10 = [f_101]
     #
     files = files_10
