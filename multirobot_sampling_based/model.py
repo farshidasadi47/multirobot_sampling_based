@@ -1039,7 +1039,7 @@ class Simulation:
             marker = False
 
     def _simplot_plot(
-        self, ax, plot_length, step, title=True, last_section=False
+        self, ax, plot_length, step, title=True, last_section=False, last=False
     ):
         """Plots the result of simulation for the given length."""
         # Draw obstacles.
@@ -1065,6 +1065,9 @@ class Simulation:
             self._draw_section(ax, poss, cmd_mode)
         # Plot robots at the end stage.
         self._draw_robots(ax, poss[-1], cmd_mode, start=False)
+        if last:
+            # Plot robots at the final stage.
+            self._draw_robots(ax, poses[-1][-1], 0, start=False)
         # Set title.
         if title:
             self._simplot_title(ax, idxs[-1] + 1, total_sections, cmd_mode)
@@ -1098,7 +1101,7 @@ class Simulation:
     def _animate(self, i, ax, step, title, boundary, last_section):
         ax.clear()
         self._simplot_set(ax, boundary)
-        self._simplot_plot(ax, i, step, title, last_section)
+        self._simplot_plot(ax, i, step, title, last_section, False)
         return ax
 
     def simanimation(
