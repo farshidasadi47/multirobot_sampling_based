@@ -622,7 +622,7 @@ class SwarmSpecs:
     @classmethod
     def robo3p(cls):
         length = np.array(
-            [[11.44, 8.46, 6.67], [11.44, 6.61, 4.75], [11.44, 4.79, 8.18]]
+            [[11.63, 8.46, 6.67], [11.63, 6.61, 4.75], [11.63, 4.79, 8.18]]
         )
         uncertainty_scaling = 0.2 * np.ones((3, 2 * 3))
         return cls(length, uncertainty_scaling)
