@@ -11,6 +11,7 @@ import json
 
 import numpy as np
 from scipy.optimize import curve_fit
+from matplotlib.ticker import FuncFormatter, LogLocator
 
 np.set_printoptions(precision=4, suppress=True)
 import matplotlib.pyplot as plt
@@ -380,7 +381,20 @@ def plot_fit(filename, height=True):
     plt.grid(True, linestyle="--", linewidth=0.5)
 
 
-def plot(filename, save=False, height=True, dmin=5, log=False, fittype=None):
+def set_ylog(ax, base="e"):
+    base, brepr = {"e": (np.e, "e"), 10: (10.0, "10")}.get(base, (np.e, "e"))
+    ax.set_yscale("log", base=base)
+
+    # Function to format ticks as powers of e
+    def format_func(value, _):
+        return f"${brepr}^{{{np.log(value) / np.log(base):.0f}}}$"
+
+    ax.yaxis.set_major_formatter(FuncFormatter(format_func))
+    # Explicitly set the minor ticks to preserve them.
+    ax.yaxis.set_minor_locator(LogLocator(base=base, subs="auto"))
+
+
+def plot_height(filename, save=False, dmin=5, log=False, fittype=None):
     fs = 32
     ms = 12
     lw = 3
@@ -388,21 +402,15 @@ def plot(filename, save=False, height=True, dmin=5, log=False, fittype=None):
     with open(filename, "r") as file:
         data = json.load(file)
     #
-    if height:
-        ydata = np.array([v["height"] for v in data.values()]) / dmin
-        ylabel = r"Height / Min. distance"
-    else:
-        ylabel = r"Min. Iterations"
-        ydata = np.array([v["imean"] for v in data.values()])
+    height = np.array([v["height"] for v in data.values()]) / dmin
+    ylabel = r"Width / min. dist. ratio"
     n_robots = np.array([int(k) for k in data.keys()])
     # Plot data points and set figure up.
     fig, ax = plt.subplots(layout="constrained")
-    # ax.plot(n_robots, heights, c="b", marker="o", ms=ms, lw=lw, zorder=4)
-    ax.scatter(n_robots, ydata, c="b", marker="o", s=ms**2, zorder=4)
+    ax.scatter(n_robots, height, c="b", marker="D", s=ms**2, zorder=4)
     ax.set_xticks(n_robots)
     ax.xaxis.set_tick_params(labelsize=fs)
     ax.set_xlabel(r"$\#$ robots", fontsize=fs)
-    # ax.set_ylabel(r"Workspace height$|_{\mathrm{mm}}$", fontsize=fs)
     ax.set_ylabel(ylabel, fontsize=fs)
     ax.yaxis.set_tick_params(labelsize=fs)
     # Add fit curve if asked.
@@ -416,24 +424,15 @@ def plot(filename, save=False, height=True, dmin=5, log=False, fittype=None):
         elif fittype.lower() == "e":
             p0 = (1, 1, 1)
             model = exponential
-            label = "Expo. fit"
+            label = "Exp. fit"
         params, _ = curve_fit(
-            lambda x, *p: model(x, p), n_robots, ydata, p0=p0
+            lambda x, *p: model(x, p), n_robots, height, p0=p0
         )
         y_fit = model(x_fit, params)
         ax.plot(x_fit, y_fit, label=label, color="k", ls="--", lw=lw)
     # Add legend.
     handles, labels = [], []
-    handles += [
-        plt.plot(
-            [],
-            [],
-            ls="",
-            markerfacecolor="b",
-            marker="o",
-            markersize=ms,
-        )[0]
-    ]
+    handles += [plt.plot([], [], ls="", marker="D", mfc="b", ms=ms)[0]]
     labels += ["Data point"]
     if fittype is not None:
         handles.append(plt.Line2D([0], [0], color="k", ls="--", lw=lw))
@@ -445,14 +444,87 @@ def plot(filename, save=False, height=True, dmin=5, log=False, fittype=None):
         fontsize=fs,
         framealpha=0.8,
         facecolor="w",
-        handletextpad=0.01,
-        labelspacing=0.05,
+        handletextpad=0.1,
+        labelspacing=0.1,
         borderpad=0.2,
         borderaxespad=0.2,
         loc="upper left",
     )
     if log:
-        ax.set_yscale("log")  # Set the y-axis to logarithmic scale.
+        set_ylog(ax)
+    if save:
+        fig_name = os.path.join(os.getcwd(), filename.replace("json", "pdf"))
+        fig.savefig(fig_name, bbox_inches="tight", pad_inches=0.05)
+    return fig, ax
+
+
+def plot_iteration(filename, save=False, log=False):
+    fs = 32
+    ms = 12
+    lw = 3
+    # Read the data
+    with open(filename, "r") as file:
+        data = json.load(file)
+    # Extract y-data (values) and x-data (number of robots)
+    ydata = [v["result"]["iterations"] for v in data.values()]
+    n_robots = [int(k) for k in data.keys()]
+    # Calculate statistics.
+    mean = np.mean(ydata, axis=1)
+    mins = np.min(ydata, axis=1)
+    maxs = np.max(ydata, axis=1)
+    # Create figure
+    fig, ax = plt.subplots(layout="constrained")
+    # Create violin plot
+    parts = ax.violinplot(
+        ydata, positions=n_robots, showmedians=False, showextrema=False
+    )
+    # Style the violins
+    for polycollection in parts["bodies"]:
+        polycollection.set_facecolor("skyblue")  # Set face color
+        polycollection.set_alpha(0.4)  # Set alpha for face
+        polycollection.set_edgecolor("b")  # Set edge color
+        polycollection.set_linewidth(lw - 1)  # Set linewidth for edge
+        polycollection.set_alpha(0.9)  # Keep edge fully opaque
+    # Add means.
+    ax.scatter(n_robots, mean, marker="D", c="r", s=ms**2, zorder=2)
+    # Add min and max.
+    ax.errorbar(
+        n_robots,
+        mean,
+        [mean - mins, maxs - mean],
+        fmt=".k",
+        capsize=8,
+        mew=3,
+        elinewidth=4,
+        zorder=1,
+    )
+    # Set axes ticks and labels.
+    ax.set_xticks(n_robots)
+    ax.xaxis.set_tick_params(labelsize=fs)
+    ax.yaxis.set_tick_params(labelsize=fs)
+    ax.set_xlabel(r"$\#$ robots", fontsize=fs)
+    ax.set_ylabel(r"Min. $\#$ iterations", fontsize=fs)
+    # Add legend.
+    handles, labels = [], []
+    handles += [plt.plot([], [], ls="", marker="D", mfc="r", ms=ms)[0]]
+    labels += ["Mean"]
+    handles += [plt.plot([], [], ls="-", color="k", lw=lw)[0]]
+    labels += ["Min\\max range"]
+    ax.legend(
+        handles=handles,
+        labels=labels,
+        handler_map={tuple: HandlerTuple(ndivide=None)},
+        fontsize=fs,
+        framealpha=0.8,
+        facecolor="w",
+        handletextpad=0.1,
+        labelspacing=0.1,
+        borderpad=0.2,
+        borderaxespad=0.2,
+        loc="upper left",
+    )
+    if log:
+        set_ylog(ax)
     if save:
         fig_name = os.path.join(os.getcwd(), filename.replace("json", "pdf"))
         fig.savefig(fig_name, bbox_inches="tight", pad_inches=0.05)
@@ -514,9 +586,9 @@ def test_iteration():
 ########## test section ################################################
 if __name__ == "__main__":
     # test_height()
-    # plot("scalability_height.json", save=True, fittype="e")
+    # plot_height("scalability_height.json", save=False, fittype="e")
     # plot_fit("scalability_height.json")
     # test_iteration()
-    # plot("scalability_iteration.json", save=True, height=False, log=True)
+    # plot_iteration("scalability_iteration.json", save=False, log=True)
     # plot_fit("scalability_iteration.json", height=False)
     plt.show()
