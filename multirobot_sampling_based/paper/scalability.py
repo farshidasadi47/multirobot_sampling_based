@@ -539,7 +539,7 @@ def test_height():
     find_heights(
         n_robots,
         vels,
-        threshold=0.9,
+        threshold=1.0,
         max_size=200000,
         max_iter=500000,
         height_lb_adaptive=True,
