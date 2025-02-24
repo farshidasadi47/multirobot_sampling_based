@@ -852,6 +852,36 @@ class ProcessVideo:
         return fig, ax
 
 
+def example_modes():
+    save = False
+    light = 0.6
+    FIG_AX = []
+    files = [
+        ("mode_0", True, False),
+        ("mode_1", False, False),
+        ("mode_2", False, True),
+    ]
+    for i, (file, scale, legend) in enumerate(files):
+        # Mode 0
+        file_dir = os.path.join(os.getcwd(), "modes", file)
+        path_lists = [
+            os.path.join(file_dir, "logs.mp4"),
+            os.path.join(file_dir, "logs.csv"),
+        ]
+        process = ProcessVideo(
+            path_lists,
+            length=30,
+            skip_mode_change=True,
+            combine_similar_sections=True,
+        )
+        # All movement snapshots.
+        name = None  # f"mode_progression_{i}"
+        title = None
+        FIG_AX += process.plot_transition(
+            name=name, title=title, light=light, scalebar=scale, legend=legend
+        )
+
+
 def example_3_old():
     save = False
     light = 0.6
