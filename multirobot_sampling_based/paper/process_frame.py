@@ -579,7 +579,9 @@ class ProcessVideo:
                 # Adjust arrow head starting point.
                 dXY = dXY = np.diff(XY, axis=0)
                 dXY = dXY / np.linalg.norm(dXY)
-                XY[0] = XY[1] - 0.01 * dXY
+                XY[0] = XY[1]
+                XY[1] = XY[0] + 0.01 * dXY
+                # XY[0] = XY[1] - 0.01 * dXY
                 # Draw arrow head.
                 ax.annotate(
                     "",
@@ -590,6 +592,7 @@ class ProcessVideo:
                     arrowprops=dict(
                         arrowstyle="-|>,head_length=1.25,head_width=1.0",
                         connectionstyle="arc3",
+                        shrinkB=0,
                         facecolor=self.light(self._colors[robot], light),
                         edgecolor=self.light("k", 0),
                         linewidth=2.0,
