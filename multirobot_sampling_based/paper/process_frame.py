@@ -852,7 +852,7 @@ class ProcessVideo:
         return fig, ax
 
 
-def example_1_old():
+def example_3_old():
     save = False
     light = 0.6
     FIG_AX = []
@@ -875,12 +875,12 @@ def example_1_old():
         name=name, title=title, light=light, scalebar=True, timestamp=True
     )
     # Start and end.
-    name = None  # "example_start"
+    name = "example_3_start"
     title = None
     FIG_AX += process.plot_shape(
         name, title, light, legend=False, initial=True, scalebar=True
     )
-    name = None  # "example_1_desired"
+    name = "example_3_desired"
     FIG_AX += process.plot_shape(
         name,
         title,
@@ -888,14 +888,13 @@ def example_1_old():
         legend=True,
         desired=True,
         scalebar=True,
-        timestamp=208,
+        timestamp=147,
     )
 
 
-def example_1():
+def example_3():
     light = 0.6
     FIG_AX = []
-    # Q to S3S2
     file_dir = os.path.join(os.getcwd(), "passage")
     path_lists = [
         os.path.join(file_dir, "logs.mp4"),
@@ -909,7 +908,7 @@ def example_1():
     )
     # Robots 0, 2.
     robots = [0, 2]
-    name = None  # "example_1_02"
+    name = None  # "example_3_02"
     title = None
     FIG_AX += process.plot_path(
         robots,
@@ -923,11 +922,11 @@ def example_1():
     )
     # Robots 1, 3.
     robots = [1, 3]
-    name = None  # "example_1_13"
+    name = None  # "example_3_13"
     FIG_AX += process.plot_path(robots, name, title, light)
 
 
 ########## test section ################################################
 if __name__ == "__main__":
-    example_1()
+    example_3()
     plt.show()
