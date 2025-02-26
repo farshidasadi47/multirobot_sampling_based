@@ -1119,7 +1119,7 @@ class Simulation:
         cmds = np.atleast_2d(cmds)
         """if step is None:
             step = self.specs.tumbling_length"""
-        fps = 10
+        fps = 20
         interval = 1000 // fps
         fps = 1000 / interval
         step = vel / fps
@@ -1144,7 +1144,7 @@ class Simulation:
             self._animate,
             fargs=(ax, step, title, boundary, last_section),
             interval=interval,
-            frames=range(anim_length + 1 + int(1 * fps)),
+            frames=range(anim_length + 1 + int(10 * fps)),
             # repeat=False,
         )
         # Saving animation.
@@ -1154,9 +1154,8 @@ class Simulation:
                 file_name,
                 fps=fps,
                 writer="ffmpeg",
-                codec="libx264",
-                bitrate=10000,
-                extra_args=["-crf", "0"],
+                codec="libx264rgb",
+                extra_args=["-crf", "0", "-preset", "slow", "-b:v", "10M"],
             )
         plt.show(block=False)
         plt.pause(0.01)
