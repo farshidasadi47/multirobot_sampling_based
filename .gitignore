@@ -1,6 +1,7 @@
 # Costum
 # Ignore all folders within paper/
 paper/
+example*
 *.pdf
 *.log
 *.json
