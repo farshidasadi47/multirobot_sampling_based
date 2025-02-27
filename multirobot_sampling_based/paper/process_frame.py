@@ -899,16 +899,16 @@ def example_3_old():
         combine_similar_sections=True,
     )
     # All movement snapshots.
-    name = None  # "example_1_snapshot"
-    title = -1
+    name = "example_3"
+    title = None
     FIG_AX = process.plot_transition(
-        name=name, title=title, light=light, scalebar=True, timestamp=True
+        name=name, title=title, light=light, scalebar=False, timestamp=True
     )
     # Start and end.
     name = "example_3_start"
     title = None
     FIG_AX += process.plot_shape(
-        name, title, light, legend=False, initial=True, scalebar=True
+        name, title, light, legend=False, initial=True, scalebar=False
     )
     name = "example_3_desired"
     FIG_AX += process.plot_shape(
