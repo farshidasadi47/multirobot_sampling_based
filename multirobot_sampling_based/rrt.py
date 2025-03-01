@@ -54,6 +54,22 @@ logger.addHandler(console_handler)
 
 ########## classes and functions #######################################
 def find_rep_rows(data, tol):
+    """
+    Find repetitive rows in a 2D array withing a given tolerance.
+
+    Parameters
+    ----------
+    data: array_like
+        A 2D array containing the data of interest.
+    tol: float
+        Tolerance for determining the repetitive rows.
+
+    Returns
+    -------
+    groups: list of list
+      A list where each sublist contains indices of repeated rows.
+    """
+
     def within_tolerance(row, rows, tol):
         rows = np.atleast_2d(rows)
         if len(rows):
@@ -85,13 +101,83 @@ def find_rep_rows(data, tol):
 
 class Obstacles:
     """
-    This class creates mesh representation of workspace and obstacles
-    from given dimensions and external contour of obstacles.
+    This class creates a mesh representation of the workspace and
+    obstacles based on given dimensions and the external contours that
+    define the obstacle outlines. This class uses triangle library for
+    triangulation.
+
+    Each mesh is represented as a tuple containing:
+        - A 2D array of obstacle contour vertices.
+        - A 2D array where each row represents a triangle, defined
+            by indices referencing the vertices array.
+        - A boolean indicating whether the obstacle is convex.
+
+    Parameters
+    ----------
+    specs : object
+        A SwarmSpecs object from model.py module containing robots
+        specifications, SwarmSpecs also includes workspace limits.
+    obstacle_contours : list of arrays, optional
+        A list of 2D contours representing Cartesian coordinates of
+        obstacle outlines (default is an empty list).
+    with_boundary : bool, optional
+        If True, it includes a meshes for workspace boundary (default is
+        False).
+    with_coil : bool, optional
+        If True, it includes a mesh for magnetic coil (default is False)
+        .
+
+    Attributes
+    ----------
+    _specs : SwarmSpecs object
+        The robots and workspace boundary specifications.
+    _with_boundary : bool
+        Flag indicating whether the boundary mesh is included.
+    _with_coil : bool
+        Flag indicating whether the coil mesh is included.
+    _contours : list
+        List of obstacle contours approximated to have less vertices and
+        convex shape if possible without losing too much detail.
+
+    Methods
+    -------
+    get_obstacle_mesh()
+        Returns the triangulated obstacle mesh.
+    get_cartesian_obstacle_contours()
+        Returns the obstacle contours in Cartesian coordinates.
+    _approximate_with_convex(contours, eps=0.1)
+        Approximates given contours with their convex hulls if too much
+        details is not getting lost based on a tolerance value.
+    _get_mesh_obstacles(contours)
+        Triangulates obstacles and returns the mesh representation.
+    _get_space_mesh()
+        Generates and returns the workspace boundary mesh.
+    _get_coil_mesh()
+        Approximates a circular coil with a polygon and returns its mesh
+        representation.
     """
 
     def __init__(
         self, specs, obstacle_contours=[], with_boundary=False, with_coil=False
     ):
+        """
+        Class constructor.
+
+        Parameters
+        ----------
+        specs : object
+            A SwarmSpecs object from model.py module containing robots
+            specifications, SwarmSpecs also includes workspace limits.
+        obstacle_contours : list of arrays, optional
+            A list of 2D contours representing Cartesian coordinates of
+            obstacle outlines (default is an empty list).
+        with_boundary : bool, optional
+            If True, it includes a meshes for workspace boundary
+            (default is False).
+        with_coil : bool, optional
+            If True, it includes a mesh for magnetic coil (default is
+            False).
+        """
         self._specs = specs
         self._with_boundary = with_boundary
         self._with_coil = with_coil
@@ -99,9 +185,19 @@ class Obstacles:
         self._contours = self._approximate_with_convex(obstacle_contours, eps)
 
     def get_obstacle_mesh(self):
+        """
+        Returns
+        -------
+        The list of triangulated obstacle mesh.
+        """
         return self._get_mesh_obstacles(self._contours)
 
     def get_cartesian_obstacle_contours(self):
+        """
+        Returns
+        -------
+        The list of obstacle contours in Cartesian coordinates.
+        """
         return self._contours
 
     def _approximate_with_convex(self, contours, eps=0.1):
@@ -125,7 +221,27 @@ class Obstacles:
 
     def _get_mesh_obstacles(self, contours):
         """
-        Triangulates obstacles and returns the mesh and mech_contour.
+        Triangulates obstacles and returns list of mesh and list of
+        mech_contour.
+
+        Each mesh is represented as a tuple containing:
+            - A 2D array of obstacle contour vertices.
+            - A 2D array where each row represents a triangle, defined
+                by indices referencing the vertices array.
+            - A boolean indicating whether the obstacle is convex.
+
+        Parameters
+        ----------
+        contours: list of arrays
+            List of 2D arrays of contours outlining obstacles.
+
+        Returns
+        -------
+        mesh: list of tuples
+            List of mesh tuples for each object.
+        mech_contours: list of arrays
+            List of contours of all triangles in the returned mesh for
+            all objects.
         """
         mesh = []
         mesh_contours = []
@@ -153,6 +269,15 @@ class Obstacles:
         return mesh, mesh_contours
 
     def _get_space_mesh(self):
+        """
+        Calculates and gives space boundaries mesh representation.
+        See _get_mesh_obstacles docstring for further explanation.
+
+        Returns
+        -------
+        mesh: list of mesh tuples
+        mesh_contours: list of arrays
+        """
         (lbx, ubx), (lby, uby) = self._specs.bounds
         verts_lbx = np.array(
             [[1.5 * lbx, 0], [lbx, 1.5 * lby], [lbx, 1.5 * uby]]
@@ -174,8 +299,13 @@ class Obstacles:
 
     def _get_coil_mesh(self):
         """
-        This approximates a circular coil with a polygon circumscribed
-        around the circle and returns the mech and mesh contours.
+        Calculates and gives magnetic coil mesh representation.
+        See _get_mesh_obstacles docstring for further explanation.
+
+        Returns
+        -------
+        mesh: list of mesh tuples
+        mesh_contours: list of arrays
         """
         N = 8  # Polygon vertices.
         r = self._specs.rcoil
@@ -213,7 +343,93 @@ class Obstacles:
 
 
 class Collision:
+    """
+    A class for handling collision detection with other robots,
+    environment obstacles, and environment boundaries. This class uses
+    the robot specifications and workspace boundaries in SwarmSpecs
+    object instance along with mesh produced by Obstacles object
+    instanceand uses python-fcl library for collision detection.
+
+    Check python-fcl documentation for how to use it:
+        https://github.com/BerkeleyAutomation/python-fcl
+
+    Parameters
+    ----------
+    mesh : list of tuples
+        A list of obstacle mesh representations. Each tuple contains:
+            - A 2D array of obstacle contour vertices.
+            - A 2D array where each row defines a triangle by
+                referencing vertex indices.
+            - A boolean indicating whether the obstacle is convex.
+    specs : SwarmSpecs instance
+        An object containing specifications of robot and such as
+        obstacle clearance, minimum distance, and workspace boundaries.
+    with_coil : bool, optional
+        If True, it considers collision checks with magnetic coitl
+        (default is True).
+
+    Attributes
+    ----------
+    T0 : fcl.Transform
+        Default transformation for collision checks, see python-fcl doc.
+    mesh : list of tuples
+        The current obstacle mesh representation.
+    rrob : float
+        The robot radius for obstacle clearance check.
+    rmin : float
+        Half of the minimum allowed distance between robots, adjusted
+        slightly to allow contact.
+    dmin : float
+        Minimum allowed distance between robots.
+    dmin2 : float
+        Square of `dmin`, used for efficiency in collision checks.
+    robot_pairs : list of tuples
+        A list defining which robots should be checked for intrarobot
+        collisions.
+    _specs : object
+        The provided robot specifications SwarmSpecs instance.
+    ball0 : fcl.Sphere
+        Represents the robots for collision detection with obstacles.
+    obstacles : list of fcl.CollisionObject
+        A list of obstacle collision objects according to python-fcl.
+    cmanager : fcl.DynamicAABBTreeCollisionManager
+        Collision manager for handling obstacle collisions.
+    col_req : fcl.CollisionRequest
+        Collision request object that holds collision results.
+    dis_req : fcl.DistanceRequest
+        Distance request object that holds minimum distance results.
+    _with_coil : bool
+        Indicates whether coil boundary collision checks are enabled.
+
+    Methods
+    -------
+    update_obstacles(mesh)
+        Builds and stores obstacle objects from list of obstacle mesh.
+    is_collision(pose)
+        Checks if a given robot position is in collision.
+    is_collision_line(pose_i, pose_f)
+        Checks for collisions along a line segment between two robot
+        positions.
+    is_collision_lines(poses_i, poses_f)
+        Checks for collisions along multiple line segments.
+    is_collision_path(poses)
+        Checks if any part of a given path results in a collision.
+    """
+
     def __init__(self, mesh, specs, with_coil=True):
+        """
+        Class constructor.
+
+        Parameters
+        ----------
+        mesh: list of mesh tuples.
+            List of obstacle mesh calculated from Obstacle instance.
+        specs: SwarmSpecs
+            Specification of robots and boundary of workspace.
+        with_coil: bool
+            If True, magnetic coil is considered in collision detection
+             (default is True).
+        """
         self.T0 = fcl.Transform()
         self.mesh = mesh
         self.rrob = specs.clearance
@@ -228,10 +444,31 @@ class Collision:
         self._with_coil = with_coil
 
     def update_obstacles(self, mesh):
+        """
+        Updates the mesh and build obstacle fcl objects.
+
+        Parameters
+        ----------
+        mech: list of mesh tuples
+            Obstacle mesh list from Obstacles object.
+        """
         self.mesh = mesh
         self.obstacles = self._build_obstacles(mesh)
 
     def _build_obstacles(self, mesh):
+        """
+        Builds fcl obstacle objects from given mesh of obstacles.
+
+        Parameters
+        ----------
+        mesh: list of mesh tuples
+            Mesh tuples of obstacles from Obstacle object.
+
+        Returns
+        -------
+        obstacle: list of fcl obstacle objects
+            List of obstacle objects used by python-fcl.
+        """
         obstacles = []
         for verts, tris, is_convex in mesh:
             if is_convex:
@@ -253,6 +490,16 @@ class Collision:
         return obstacles
 
     def _build_cmanager(self):
+        """
+        Buils fcl collision manager, collision request, and distance
+        request.
+
+        Returns
+        -------
+        fcl collision manager
+        fcl collision request
+        fcl distance request
+        """
         cmanager = fcl.DynamicAABBTreeCollisionManager()
         cmanager.registerObjects(self.obstacles)
         cmanager.setup()
@@ -264,6 +511,19 @@ class Collision:
         return cmanager, col_req, dis_req
 
     def is_collision(self, pose):
+        """
+        Tells is a given position is in collision.
+
+        Parameters
+        ----------
+        pose: array
+            1D array of robots positions.
+
+        Returns
+        -------
+        bool
+            True if there is collision, else False.
+        """
         return (
             self._is_collision_boundary(pose)
             or self._is_collision_intrarobot(pose)
@@ -271,6 +531,26 @@ class Collision:
         )
 
     def is_collision_line(self, pose_i, pose_f):
+        """
+        Checks for collision and time of it along the path between two
+        robot positions.
+
+        Parameters
+        ----------
+        pose_i : array-like
+            1D array of initial positions of the robots.
+        pose_f : array-like
+            1D array of final positions of the robots.
+
+        Returns
+        -------
+        is_collision : bool
+            True if a collision is detected, False otherwise.
+        time_collision : float
+            The earliest time at which a collision occurs, with 0
+            indicating an immediate collision and 1 meaning no collision
+            occurs along the path.
+        """
         # Collision with obstacles.
         is_collision_a, time_collision_a = self._is_collision_line(
             pose_i, pose_f
@@ -290,6 +570,31 @@ class Collision:
         return is_collision, time_collision
 
     def is_collision_lines(self, poses_i, poses_f):
+        """
+        This method evaluates whether any collision occurs while moving
+        from a set of initial positions (poses_i) to corresponding final
+        positions (poses_f). It iterates through each pair of start and
+        end points, stopping early if a collision is detected.
+
+        Parameters
+        ----------
+        poses_i : array-like
+            A 2D array of initial positions.
+        poses_f : array-like
+            A 2D array of final positions, corresponding to poses_i.
+
+        Returns
+        -------
+        is_collision : bool
+            True if any collision is detected, False otherwise.
+        i_collision : int or None
+            The index of the first collision detected, or None if no
+            collision occurs.
+        time_collision : float
+            The earliest time at which a collision occurs in i_collision
+            section of path, with 0 indicating an immediate collision
+            and 1 meaning no collision occurs along any path.
+        """
         poses_i = np.atleast_2d(poses_i)
         poses_f = np.atleast_2d(poses_f)
         is_collision = False
@@ -305,6 +610,20 @@ class Collision:
         return is_collision, i_collision, time_collision
 
     def is_collision_path(self, poses):
+        """
+        Checks if a given path results in a collision. It excludes start
+        and end point from collision check.
+
+        Parameters
+        ----------
+        poses : array-like
+            A 2D array of positions representing the path.
+
+        Returns
+        -------
+        bool
+            True if collision occurs along the path, False otherwise.
+        """
         # First check vertices of the path, ignore start and end.
         if len(poses) > 2:
             is_collision, _ = self._is_collision_inc(poses[1:-1])
@@ -321,7 +640,17 @@ class Collision:
 
     def _is_collision_intrarobot(self, pose):
         """
-        Checks if robots are coliding in current position.
+        Checks if any robot pairs are colliding with each other.
+
+        Parameters
+        ----------
+        pose : array-like
+            1D arrays of robots positions.
+
+        Returns
+        -------
+        bool
+            True if any robots are in collision, False otherwise.
         """
         is_collision = False
         pose = np.reshape(pose, (-1, 2))
@@ -331,6 +660,19 @@ class Collision:
         return is_collision
 
     def _is_collision_boundary(self, pose):
+        """
+        Checks if any robot collides with work workspace boundary.
+
+        Parameters
+        ----------
+        pose : array-like
+            1D arrays of robots positions.
+
+        Returns
+        -------
+        bool
+            True if any robots are in collision, False otherwise.
+        """
         (lbx, ubx), (lby, uby) = self._specs.obounds
         rcoil2 = self._specs.rcoil**2
         pose = pose.reshape(-1, 2)
@@ -344,6 +686,23 @@ class Collision:
         return is_collision
 
     def _is_collision(self, poses):
+        """
+        Checks if a given list of robots positions collides with
+        obstacles.
+
+        Parameters
+        ----------
+        poses : array-like
+            A 2D array where each row represents a robot system
+            positions.
+
+        Returns
+        -------
+        tuple
+            (bool, int) :
+            - True if a collision is detected, False otherwise.
+            - Index of the last collision-free row of positions.
+        """
         poses = np.atleast_2d(poses)
         n_poses = len(poses)
         # Pad last axis with zero.
@@ -375,6 +734,21 @@ class Collision:
         return cdata.result.is_collision, ind_last_collision_free
 
     def _is_collision_inc(self, poses):
+        """
+        Incrementally checks for collisions along array of positions.
+
+        Parameters
+        ----------
+        poses : array-like
+            2D array of sequence of robots positions.
+
+        Returns
+        -------
+        tuple
+            (bool, int) :
+            - True if a collision occurs, False otherwise.
+            - Index of the last collision-free of positions sequence.
+        """
         poses = np.atleast_2d(poses)
         n_poses = len(poses)
         # Reshape to (n_poses, n_robot, 2).
@@ -388,6 +762,24 @@ class Collision:
         return is_collision, ind_last_collision_free
 
     def _is_collision_line(self, pose_i, pose_f):
+        """
+        Checks for collisions with obstacles along a linear path between
+        two given robots positions.
+
+        Parameters
+        ----------
+        pose_i : array-like
+            1D array of robots initial positions.
+        pose_f : array-like
+            1D array of robots final positions.
+
+        Returns
+        -------
+        tuple
+            (bool, float) :
+            - True if a collision occurs, False otherwise.
+            - Earliest time of collision, rounded down.
+        """
         # Reshape to (n_robot, 2).
         pose_i = np.reshape(np.atleast_1d(pose_i), (-1, 2))
         pose_f = np.reshape(np.atleast_1d(pose_f), (-1, 2))
@@ -416,8 +808,22 @@ class Collision:
 
     def _is_collision_line_intrarobot(self, pose_i, pose_f):
         """
-        This function checks collision between line segment and a circle
-        at origin.
+        Checks for collisions between robot pairs along a linear path
+        between two given robots positions.
+
+        Parameters
+        ----------
+        pose_i : array-like
+            1D array of robots initial positions.
+        pose_f : array-like
+            1D array of robots final positions.
+
+        Returns
+        -------
+        tuple
+            (bool, float) :
+            - True if a collision occurs, False otherwise.
+            - Earliest time of collision, rounded down.
         """
         pose_i = np.reshape(pose_i, (-1, 2))
         pose_f = np.reshape(pose_f, (-1, 2))
@@ -446,6 +852,24 @@ class Collision:
         return is_collision, time_collision_free
 
     def _is_collision_line_boundary(self, pose_i, pose_f):
+        """
+        Checks for collisions with workspace boundary along a linear
+        path between two given robots positions.
+
+        Parameters
+        ----------
+        pose_i : array-like
+            1D array of robots initial positions.
+        pose_f : array-like
+            1D array of robots final positions.
+
+        Returns
+        -------
+        tuple
+            (bool, float) :
+            - True if a collision occurs, False otherwise.
+            - Earliest time of collision, rounded down.
+        """
         bx, by = self._specs.obounds
         rcoil2 = self._specs.rcoil**2
         # Test if initial position is inside boundary.
@@ -505,6 +929,210 @@ class Collision:
 
 
 class RRT:
+    """
+    Adapter Rapidly-exploring Random Tree (Adapted RRT) algorithm for
+    path planning for a class of heterogeneous robotic systems.
+
+    Attributes
+    ----------
+    Path : TypedDict
+        A dictionary-like object that stores details of a path.
+    _specs : SwarmSpecs object
+        Contains robot specifications and workspace boundaries.
+    _collision : Collision object
+        A collision-checking module.
+    _obstacle_contours : list
+        A list of obstacle boundary contours.
+    _max_size : int
+        Maximum number of nodes allowed in the tree.
+    _max_iter : int
+        Maximum iterations allowed for RRT search.
+    _tol_cmd : float
+        Tolerance value for removing zero pseudo displacements.
+    _goal_bias : float
+        Probability of sampling the goal directly.
+    _tol_goal : float
+        Tolerance for considering a node has reached the goal.
+    _start : np.ndarray
+        The starting position of the robots.
+    _goal : np.ndarray or None
+        The goal position of the robots.
+    _mode_sequence : np.ndarray or None
+        The basic mode sequence of the tree.
+    _WI : np.ndarray
+        Pseudo inverse of robot controllability matrix.
+    _WIT : np.ndarray
+        The transpose of _WI used for least square control solution.
+    _lb : np.ndarray
+        The lower bounds of the robot's configuration space.
+    _ub : np.ndarray
+        The upper bounds of the robot's configuration space.
+    _tol_pose : float
+        The tolerance for avoiding duplicate points.
+    _tol_goal : float
+        The tolerance for determining if the robot has reached the
+        goal.
+    _log : bool
+        A flag for showing the log info during the RRT expansion.
+    _n_state : int
+        The state dimension of the robotic systems (twice number of
+        robots).
+    _poses : np.ndarray
+        A 2D array where each row represents the position of a tree
+        node at that row's index.
+    _depths : np.ndarray
+        2D array where each row represents a tree node's depths. By
+        depth it actually means the index of next immediate mode in
+        the basic mode sequence that will be used for expanding from
+        the node.
+    _parents : np.ndarray
+        1D array where each elemnt is the index of parent node.
+    _commands : list
+        A list of 2D arrays, where each array is the commands that
+        takes the node's parent to the node.
+    _command_modes : list
+        A list of arrays representing the modes of _commands.
+    _tracks : list
+        A list of 2D arrays representing the path from the node's
+        parent to the node using the corresponding _commands and
+        _command_modes.
+    _costs : np.ndarray
+        A array where each element is the cost of going node's
+        parent to the node.
+    _values : np.ndarray
+        1D array where each element is the cost of reaching the node
+        at that index.
+    _childs : tuple of lists
+        Each list is the list of children's of the corresponding
+        node.
+    _ltypes : np.ndarray
+        The type of the immediate path toward the corresponding node
+        (normal, suboptimal, or optimal), used for visualization.
+    _faiss : faiss.IndexFlatL2
+        A Faiss index for fast nearest-neighbor search in the tree.
+    _not_goal_mask : np.ndarray
+        A boolean mask that is True when the node is not goal.
+    _not_expanded_to_goal_mask : np.ndarray
+        A boolean mask that is True if the node is not yet selected
+        for expansion toward goal.
+    _goal_inds : list
+        A list of indices of nodes that reached the goal.
+    _goal_ind_values : dict
+        A dictionary mapping goal node indices to their path costs.
+    best_value : float
+        The best path value found so far.
+    _best_ind : int
+        The index of the best goal node found.
+    _paths : list
+        A list of valid paths found during the planning process.
+    _best_path_ind : int
+        The index of the best path found in the list of paths.
+    cmds : np.ndarray
+        The array of commands for the best path found.
+    _arts_info : list
+        A list of information about the graphical representations of
+        nodes.
+    _arts : dict
+        A dictionary storing matplotlib artist of the corresponding
+        node. Keys are node indices.
+    _line_style_map : dict
+        A mapping of node line styles (normal, suboptimal, or
+        optimal).
+
+    Methods
+    -------
+    _reset_tree():
+        Resets the tree structure used in RRT.
+    _set_mode_sequence(basic_mode_sequence=None)
+        Sets the basic mode sequence for motion planning.
+    _get_next_mode_sequence(modes)
+        Generates the next mode sequence.
+    print_node(ind)
+        Prints information about a specific node in the tree.
+    _add_node(
+        pose, depth=0, parent=-1, cmds, cmd_modes, track, cost,
+        goal_reached)
+        Adds a new node to the tree and updates relevant attributes.
+    _sample()
+        Samples a random position in the environment.
+    _sample_collision_free()
+        Samples a random collision-free position.
+    _distance(arr)
+        Computes the Euclidean norm of a given displacement array.
+    _cost(arr):
+        Computes the movement cost based on a displacement array.
+    _get_mode(depth)
+        Returns the motion mode for a given depth.
+    _get_depth_mode_sequence(depth_i, depth_f=None)
+        Computes depth indices and mode sequences for a given range.
+    _nearest_node(pose, goal_selected)
+        Finds the nearest node in the tree to a given point.
+    _dynamics(pose_i, cmds, mode_sequence)
+        Simulates the system dynamics to compute next states.
+    _remove_zero_cmds(cmds, depths, mode_sequence)
+        Filters out zero displacement commands from a motion sequence.
+    _steer(pose_i, pose_f, depths, modes)
+        Generates a sequence of commands and poses from an initial to a
+        final pose.
+    _within_pose_tol(dpose)
+        Checks if a displacement is within tolerance limits.
+    _within_goal(pose)
+        Checks if a given pose is within the goal region.
+    _remove_colliding(
+        cmds, poses, depths, mode_sequence, is_collision, i_collision,
+        time_collision)
+        Removes sections of a path that are in collision.
+    _extend(ind_i, cmds, poses, depths, mode_sequence, goal_selected)
+        Extends the tree by adding new nodes and checking goal
+        conditions.
+    _generate_path(ind)
+        Generates a path from the root node to a given node index.
+    _set_cmds()
+        Updates best path pseudo displacement if any path is found.
+    _set_ltype(inds, ltype=0)
+        Sets the label type for nodes (normal, suboptimal, optimal).
+    _add_new_path(ind)
+        Adds a new feasible path to the stored list of paths.
+    _update_paths_all(new_ind, goal_reached)
+        Updates all stored paths when a new node is added.
+    _update_paths_best(new_ind, goal_reached)
+        Updates only the best path in the stored paths.
+    _update_paths(new_ind, goal_reached)
+        Calls the best path update function when a new node is added.
+    _set_arts_info(inds)
+        Updates information related to visualization artifacts.
+    _accurate_tumbling(cmd)
+        Converts given tumbling into two experimentally executable
+        tumbling such that the mode of robots remains the same after
+        executing them.
+    post_process(cmds, ang=0)
+        Post-processes the command by adding mode changes and modifying
+        tumblings to be executable experimentally.
+    plan(
+        start, goal, basic_mode_sequence=None, fig_name=None,
+        anim_name=None, anim_online=False, plot=False, log=True,
+        lazy=False)
+        Executes the adapted RRT algorithm to find a path.
+    _set_legends_online(ax, robot)
+        Adds legends to the online visualization.
+    _draw_robot(ax, robot, pose, color)
+        Draws a robot at a given pose on the plot.
+    _set_subplot_online(ax, robot)
+        Sets up subplots for visualization.
+    _set_plot_online(fig=None, axes=None, cid=-1)
+        Initializes an interactive plot for real-time visualization.
+    _draw_line(ax, robot, poses, ltype=0)
+        Draws a line representing a path segment.
+    _edit_line(art, robot, poses, ltype=0)
+        Updates an existing line with new data.
+    _draw_node(axes, ind, tracks, ltype)
+        Draws a tree node in the visualization.
+    _draw_nodes(iteration, axes)
+        Draws all nodes in the tree for a given iteration.
+    _get_stop_req()
+        Checks user input for stopping the planning process.
+    """
+
     class Path(TypedDict):
         inds: np.ndarray  # Array of indexes of nodes in the path.
         poses: np.ndarray  # Array of positions in the path.
@@ -524,6 +1152,29 @@ class RRT:
         goal_bias=0.07,
         tol_goal=1e-0,
     ) -> None:
+        """
+        Class constructor.
+
+        Parameters
+        ----------
+        specs : SwarmSpecs object
+            Specifications of robots and workspace boundary.
+        collision : Collision object
+            Collision checker.
+        obstacle_contours : list of arrays
+            List of 2D arrays of obstacle outline contours.
+        max_size : int, optional, default=1000
+            The maximum number of adapted RRT nodes.
+        max_iter : int, optional, default=500000
+            The maximum number of iterations to run the adapted RRT.
+        tol_cmd : float, optional, default=1e-2
+            The tolerance for removing zero displacements.
+        goal_bias : float, optional, default=0.07
+            The probability of sampling the goal state for tree
+            expansion.
+        tol_goal : float, optional, default=1e-0
+            The tolerance for determining if the goal has been reached.
+        """
         self._start = None
         self._goal = None
         self._mode_sequence = None
@@ -552,6 +1203,9 @@ class RRT:
         self._colors = list(self._colors.keys())
 
     def _reset_tree(self):
+        """
+        Resets and reinitializes the tree.
+        """
         self._n_state = self._specs.n_robot * 2
         max_size = self._max_size
         self._N = 0  # Current number of nodes.
@@ -598,8 +1252,14 @@ class RRT:
 
     def _set_mode_sequence(self, basic_mode_sequence=None):
         """
-        Checks mode_sequence, if available.
-        Otherwise returns the default sequence.
+        Sets the basic mode sequence for the planner.
+
+        Parameters
+        ----------
+        basic_mode_sequence : list of int, optional
+            A predefined sequence of mode indices that includes all
+            modes of the system without repetition. If None, the default
+            sequence [0, 1, ..., n_mode-1] is used.
         """
         # Modify tumble_index.
         n_mode = self._specs.n_mode
@@ -610,6 +1270,20 @@ class RRT:
 
     @staticmethod
     def _get_next_mode_sequence(modes):
+        """
+        Generates the next mode sequence based on cycling the given mode
+        sequence. The next mode for zero modes is considered zero.
+
+        Parameters
+        ----------
+        modes : list or array-like of int
+            A mode sequence.
+
+        Returns
+        -------
+        np.ndarray
+            Next mode sequence.
+        """
         next_modes = np.roll([mode for mode in modes if mode], -1)
         next_mode_sequence = []
         cnt = 0
@@ -622,6 +1296,14 @@ class RRT:
         return np.array(next_mode_sequence, dtype=int)
 
     def print_node(self, ind):
+        """
+        Prints the details of a node in the tree.
+
+        Parameters
+        ----------
+        ind : int
+            Index of the node to print. The index is clipped _max_size.
+        """
         ind = np.clip(ind, 0, self._N - 1).item(0)
         print(f"pose:{self._poses[ind]}")
         print(f"depth:{self._depths[ind]}")
@@ -645,6 +1327,39 @@ class RRT:
         cost=0,
         goal_reached=False,
     ):
+        """
+        Adds a new node to the tree.
+
+        Parameters
+        ----------
+        pose : array-like
+            The position of the new node.
+        depth : int, optional (default=0)
+            Depth of the node in the tree. Depth is the index of next
+            mode in the basic mode sequence.
+        parent : int, optional (default=-1)
+            Index of the parent node. If -1, the node has no parent.
+        cmds : ndarray, optional (default=zeros((1, 2)))
+            Array of commands that move the parent to this node.
+        cmd_modes : ndarray, optional (default=zeros(1, dtype=int))
+            Array indicating the command modes corresponding to cmds.
+        track : object, optional
+            The path positions from parent node to this node.
+        cost : float, optional (default=0)
+            Cost from parent node to this node.
+        goal_reached : bool, optional (default=False)
+            True if this node has reached the goal position.
+
+        Returns
+        -------
+        int
+            The index of the newly added node.
+
+        Notes
+        -----
+        - Updates general node related tree attributes.
+        - If the goal is reached, updates goal related tree attributes.
+        """
         new_ind = self._N
         self._poses[new_ind] = pose
         self._depths[new_ind] = depth
@@ -667,6 +1382,16 @@ class RRT:
         return new_ind
 
     def _sample(self):
+        """
+        Samples a random point in the search space or selects the goal
+        with a probability defined by _goal_bias.
+
+        Returns
+        -------
+        tuple (bool, ndarray)
+            - A boolean indicating whether the goal was selected.
+            - A 2D sampled position.
+        """
         prob = np.random.random()
         if prob > self._goal_bias:
             # If random point is selected.
@@ -678,6 +1403,15 @@ class RRT:
             return True, self._goal
 
     def _sample_collision_free(self):
+        """
+        Samples a random collision-free point in the search space.
+
+        Returns
+        -------
+        tuple (bool, ndarray)
+            - A boolean indicating whether the goal is sampled.
+            - A collision free sampled robot position.
+        """
         is_collision = True
         while is_collision:
             is_goal_selected, rnd = self._sample()
@@ -685,10 +1419,41 @@ class RRT:
         return is_goal_selected, rnd
 
     def _distance(self, arr):
+        """
+        Computes the Euclidean norm (L2 norm) for rows of a given array.
+        This is used to calculate distance between pose_1 and pose_2
+        by feedeing [arr] where arr is pose_2 - pose_1
+
+        Parameters
+        ----------
+        arr : ndarray
+            2D array where each row is a dpose:= pose_1 - pose_2 vector.
+
+        Returns
+        -------
+        ndarray
+            Array of Euclidean distances for each row of arr.
+        """
         arr = np.atleast_2d(arr)
         return np.linalg.norm(arr, axis=1)
 
     def _cost(self, arr):
+        """
+        Computes the cost estimate for rows of arrays of displacements.
+        This estimates the number of steps that it takes to go from
+        pose_1 to pose_2 based on least square solution that is
+        thresholded by _cmd_tol to remove zero length steps.
+
+        Parameters
+        ----------
+        arr : ndarray
+            2D array where each row is a dpose:= pose_1 - pose_2 vector.
+
+        Returns
+        -------
+        ndarray
+            Array of costs for each row of arr.
+        """
         arr = np.atleast_2d(arr)
         u = np.einsum("ij, hj->hi", self._WI, arr).reshape(
             -1, self._specs.n_mode, 2
@@ -698,15 +1463,77 @@ class RRT:
         )
 
     def _get_mode(self, depth):
+        """
+        Gives the mode corresponding to a given depth.
+
+        Parameters
+        ----------
+        depth : int
+            The depth for which to determine the mode.
+
+        Returns
+        -------
+        int
+            The mode corresponding to the given depth, determined
+            cyclically.
+        """
         return self._basic_mode_sequence[depth % self._n_basic_mode_sequence]
 
     def _get_depth_mode_sequence(self, depth_i, depth_f=None):
+        """
+        Generates a sequence of depths and corresponding modes.
+
+        Parameters
+        ----------
+        depth_i : int
+            The initial depth value.
+        depth_f : int, optional
+            The final depth value (not used explicitly in the function).
+
+        Returns
+        -------
+        tuple of ndarray
+            - depths : ndarray
+                Array of depth values starting from `depth_i`.
+            - mode_sequence : ndarray
+                Corresponding mode sequence for the depth values.
+        """
         depths = np.arange(depth_i, depth_i + self._n_basic_mode_sequence)
         mode_sequence = self._get_mode(depths)
         depths = depths + 1
         return depths, mode_sequence
 
     def _nearest_node(self, pose, goal_selected):
+        """
+        Finds the nearest node in the tree to a given pose.
+
+        Parameters
+        ----------
+        pose : ndarray
+            The given position to find the nearest node to.
+        goal_selected : bool
+            True if pose is the goal position.
+
+        Returns
+        -------
+        tuple
+            - nearest_ind : int or None
+                Index of the nearest node.
+            - nearest_pose : ndarray or None
+                The position of the nearest node.
+            - depths : ndarray or None
+                Depth values for the mode sequence.
+            - mode_sequence : ndarray or None
+                Mode sequence corresponding to depths.
+
+        Notes
+        -----
+        If searching nearest node to the goal position (goal_selected
+        is True), but no node is left in the tree that hasn't been
+        previously selectiod fo expansion toward goal, then it returns a
+        tuple of None. This is to avoid choosing the same nearest node
+        repeatedly when expanding toward goal position.
+        """
         if goal_selected:
             inds_selector = np.nonzero(
                 self._not_expanded_to_goal_mask[: self._N]
@@ -732,6 +1559,26 @@ class RRT:
         return nearest_ind, nearest_pose, depths, mode_sequence
 
     def _dynamics(self, pose_i, cmds, mode_sequence):
+        """
+        Computes the sequence of poses given an initial pose, commands,
+        and mode sequence.
+
+        Parameters
+        ----------
+        pose_i : ndarray
+            Initial position of robots.
+        cmds : ndarray
+            2D array of commands, each row is a pseudo displacement to
+            be applied sequentially.
+        mode_sequence : ndarray
+            Sequence of modes corresponding to each row of command.
+
+        Returns
+        -------
+        ndarray
+            Array of positions generated by applying the commands
+            sequentially.
+        """
         poses = [pose_i]
         for mode, cmd in zip(mode_sequence, cmds):
             poses.append(poses[-1] + self._specs.B[mode] @ cmd)
@@ -739,6 +1586,28 @@ class RRT:
         return poses
 
     def _remove_zero_cmds(self, cmds, depths, mode_sequence):
+        """
+        Removes zero commands from the command sequence.
+
+        Parameters
+        ----------
+        cmds : ndarray
+            Array of pseudo displacements.
+        depths : ndarray
+            Depths corresponding to each row of cmds.
+        mode_sequence : ndarray
+            Mode sequence corresponding to each row of cmds.
+
+        Returns
+        -------
+        tuple of ndarrays
+            - cmds : ndarray
+                Filtered array of nonzero commands.
+            - depths : ndarray
+                Corresponding depths of the nonzero commands.
+            - mode_sequence : ndarray
+                Mode sequence of the nonzero commands.
+        """
         mask = np.linalg.norm(cmds, axis=1) > self._tol_cmd
         cmds = cmds[mask]
         depths = depths[mask]
@@ -746,6 +1615,38 @@ class RRT:
         return cmds, depths, mode_sequence
 
     def _steer(self, pose_i, pose_f, depths, modes):
+        """
+        Implements sparse least square algorithm to find a sparse
+        sequence of displacement that is taking pose_i to pose_f using
+        the provided mode sequence.
+
+        Parameters
+        ----------
+        pose_i : ndarray
+            Initial position of robots.
+        pose_f : ndarray
+            Final position of robots.
+        depths : ndarray
+            Depth values corresponding to the mode sequence.
+        modes : ndarray
+            Mode sequence to use.
+
+        Returns
+        -------
+        tuple of ndarrays
+            - cmds : ndarray
+                Array of pseudo displacements.
+            - poses : ndarray
+                Sequence of posisions from pose_i to pose_f using cmds.
+            - depths : ndarray
+                Sequence of depths corresponding to cmds rows.
+            - modes : ndarray
+                Mode sequence correspondint to cmds.
+
+        Notes
+        -----
+        - cmds are removed if their length is smaller than _tol_cmd.
+        """
         n_robot = self._specs.n_robot
         beta = self._specs.beta[:, modes]
         while True:
@@ -771,9 +1672,35 @@ class RRT:
         return cmds, poses, depths, modes
 
     def _within_pose_tol(self, dpose):
+        """
+        Checks if the dpose is within the _tol_pose.
+
+        Parameters
+        ----------
+        dpose : ndarray
+            1D array representing position difference dpose.
+
+        Returns
+        -------
+        bool
+            True if within tolerance, else False.
+        """
         return np.all(np.hypot(dpose[::2], dpose[1::2]) <= self._tol_pose)
 
     def _within_goal(self, pose):
+        """
+        Determines if a position is within _tol_goal of goal position.
+
+        Parameters
+        ----------
+        pose : ndarray
+            The robots position.
+
+        Returns
+        -------
+        bool
+            True if within tolerance, else False.
+        """
         dpose = (self._goal - pose).reshape(-1, 2)
         distances = np.linalg.norm(dpose, axis=1)
         return (distances < self._tol_goal).all()
@@ -788,6 +1715,39 @@ class RRT:
         i_collision,
         time_collision,
     ):
+        """
+        Removes colliding parts of a path.
+
+        Parameters
+        ----------
+        cmds : ndarray
+            Array of path pseudo displacement sequence.
+        poses : ndarray
+            Array of path positions.
+        depths : ndarray
+            Aray of path depths.
+        mode_sequence : ndarray
+            Mode sequence of the path.
+        is_collision : bool
+            Indicates whether a collision was detected.
+        i_collision : int
+            Index of path section where first collision happened.
+        time_collision : float
+            Time fraction at which the collision detected in i_collision
+            section.
+
+        Returns
+        -------
+        tuple of ndarrays
+            - cmds : ndarray
+                Cleaned out cmds.
+            - poses : ndarray
+                Correspondinf cleaned out array of path positions.
+            - depths : ndarray
+                Corresponding cleaned out depths.
+            - mode_sequence : ndarray
+                Corresponding cleaned out mode sequence.
+        """
         if is_collision:
             cmds[i_collision] = cmds[i_collision] * time_collision
             poses[i_collision + 1] = (
@@ -813,6 +1773,34 @@ class RRT:
         mode_sequence,
         goal_selected,
     ):
+        """
+        Extends the tree by adding a given new node, if the position
+        does not already exist in the tree.
+
+        Parameters
+        ----------
+        ind_i : int
+            Index of the parent node in the tree.
+        cmds : ndarray
+            Array of pseudo displacements taking parent node to new
+            node.
+        poses : ndarray
+            Array of positions along path from parent node to new node.
+        depths : ndarray
+            Sequence of depths along path from parent node to new node.
+        mode_sequence : ndarray
+            The mode sequence used to take parent node to new node.
+        goal_selected : bool
+            Wheter this was result to extension toward goal position.
+
+        Returns
+        -------
+        tuple
+            - new_ind (int or None):
+                Index of the newly added node, or None if not added.
+            - within_goal (bool):
+                True if the new node has reached goal position.
+        """
         new_ind = None
         within_goal = False
         #
@@ -836,6 +1824,20 @@ class RRT:
         return new_ind, within_goal
 
     def _generate_path(self, ind):
+        """
+        Gives the path from the start node to the specified node. It is
+        intended to be used with indexes that reached goal position.
+
+        Parameters
+        ----------
+        ind : int
+            Index of the node to give the path to.
+
+        Notes
+        -----
+        - The path is stored in _paths attribute.
+        - Logs the number of nodes and path value if logging is enabled.
+        """
         if self._log:
             msg = (
                 f"Number of tree nodes {self._N}, "
@@ -874,6 +1876,10 @@ class RRT:
         self._paths.append(path)
 
     def _set_cmds(self):
+        """
+        Updates the pseudo displacement and mode sequence for the best
+        path and stores it in cmds instance variable.
+        """
         path = self._paths[self._best_path_ind]
         cmds = path["cmds"]
         modes = path["cmd_modes"]
@@ -881,9 +1887,34 @@ class RRT:
         self.cmds = np.hstack((cmds, modes[:, None]))
 
     def _set_ltype(self, inds, ltype=0):
+        """
+        Updates the label type for the given node indices. The line type
+        is used for the RRT visualization.
+
+        Parameters
+        ----------
+        inds : array-like
+            Indices of nodes to update.
+        ltype : int, optional
+            Label type (default is 0).
+        """
         self._ltypes[inds] = ltype
 
     def _add_new_path(self, ind):
+        """
+        Adds a new path to the path list and updates the best path if
+        applicable.
+
+        Parameters
+        ----------
+        ind : int
+            Index of the last node of newly added path.
+
+        Returns
+        -------
+        list of int
+            Indices of nodes to redraw.
+        """
         ltype = 1
         inds_to_draw = []
         if self._values[ind] < self.best_value - self._eps:
@@ -906,6 +1937,22 @@ class RRT:
         return inds_to_draw
 
     def _update_paths_all(self, new_ind, goal_reached):
+        """
+        Updates all goal-reaching paths and checks for improvements.
+        Not used in the implementation due to massive computations.
+
+        Parameters
+        ----------
+        new_ind : int
+            Index of the newly added node.
+        goal_reached : bool
+            Whether the goal was reached by the new node.
+
+        Returns
+        -------
+        list of int
+            Indices of nodes to draw or redraw.
+        """
         # Check for updated paths.
         past_values = np.array(
             [self._goal_ind_values.get(ind) for ind in self._goal_inds]
@@ -933,6 +1980,21 @@ class RRT:
         return inds_to_draw
 
     def _update_paths_best(self, new_ind, goal_reached):
+        """
+        Updates only the best path if a better one is found.
+
+        Parameters
+        ----------
+        new_ind : int
+            Index of the newly added node, not used.
+        goal_reached : bool
+            Whether the goal was reached by the new node, not used.
+
+        Returns
+        -------
+        list of int
+            Indices of nodes to redraw.
+        """
         inds_to_draw = []
         if len(self._goal_inds):
             ind_best = self._values[self._goal_inds].argmin()
@@ -943,18 +2005,65 @@ class RRT:
         return inds_to_draw
 
     def _update_paths(self, new_ind, goal_reached):
+        """
+        Updates paths using the _update_best_path.
+
+        Parameters
+        ----------
+        new_ind : int
+            Index of the newly added node.
+        goal_reached : bool
+            Whether the goal was reached by the new node.
+
+        Returns
+        -------
+        list of int
+            Indices of nodes to redraw.
+
+        Notes
+        -----
+        - Can be overridden to use _update_paths_all if needed.
+        """
         return self._update_paths_best(new_ind, goal_reached)
 
     def _set_arts_info(self, inds):
+        """
+        Stores matplotlib artists related to nodes.
+
+        Parameters
+        ----------
+        inds : array-like
+            Indices of nodes to store information for.
+
+        Notes
+        -----
+        - Collects and stores node indices, tracks, and label types.
+        - Ensures unique indices before storing.
+        """
         inds = np.unique(inds).tolist()
         tracks = [self._tracks[ind] for ind in inds]
         ltypes = self._ltypes[inds]
         self._arts_info.append(list(zip(inds, tracks, ltypes)))
 
     def _accurate_tumbling(self, cmd):
-        """This function gets a desired rotation and returns a sequence
-        of two pure steps of rotations that produce the desired movement
-        in rotation mode."""
+        """
+        Arbitrary tumblings cannot be directly performed since tumbling
+        each tumbling results in discrete displacements. This method
+        converts a given tumbling into two seperate pieces of complete
+        tumblings. The total number of tumblings is forced to be even so
+        the robots modes stays the same after performing real tumblings.
+
+        Parameters
+        ----------
+        cmd : array-like, shape (2,)
+            The desired tumbling.
+
+        Returns
+        -------
+        u_possible : ndarray, shape (2, 3)
+            A sequence of two tumbling pseudo displacements with total
+            even number of tumbles.
+        """
 
         def F(phi, r1, r2, cmd):
             f1 = r1 * np.cos(phi[0]) + r2 * np.cos(phi[1]) - cmd[0]
@@ -984,7 +2093,22 @@ class RRT:
         return u_possible
 
     def post_process(self, cmds, ang=0):
-        """Post processes the command and adds intermediate steps."""
+        """
+        Post-processes commands by adding required mode changed and
+        modifying tumblings.
+
+        Parameters
+        ----------
+        cmds : ndarray, shape (N, 3)
+            Array of pseudo displacements in different modes.
+        ang : float, optional
+            Angle that the mode change should be performed along with.
+
+        Returns
+        -------
+        ndarray, shape (M, 3)
+            The modified pseudo displacement sequence.
+        """
         ang = np.deg2rad(ang)
         # Get next mode sequence.
         next_modes = self._get_next_mode_sequence(cmds[:, -1])
@@ -1050,6 +2174,34 @@ class RRT:
         log=True,
         lazy=False,
     ):
+        """
+        Plans a path from a start position to a goal position using a
+        Adapter RRT approach.
+
+        Parameters
+        ----------
+        start : array-like
+            The robots start position.
+        goal : array-like
+            The robots goal position.
+        basic_mode_sequence : array-like, optional
+            The sequence of movement modes to follow (default is None).
+        fig_name : str, optional
+            Filename for saving the tree figure (default is None).
+        anim_name : str, optional
+            Filename for saving the tree animation (default is None).
+        anim_online : bool, optional
+            Whether to animate the planning process in real-time
+            (default is False).
+        plot : bool, optional
+            Whether to plot the search tree during execution
+            (default is False).
+        log : bool, optional
+            Whether to log progress messages (default is True).
+        lazy : bool, optional
+            Whether to stop immediately when the goal is reached
+            (default is False).
+        """
         # Reset existing tree.
         self._log = log
         self._reset_tree()
@@ -1133,6 +2285,17 @@ class RRT:
             logger.debug(f"# nodes = {n_nodes:> 6d}, iteration = {i:>7d}")
 
     def _set_legends_online(self, ax, robot):
+        """
+        Sets up the tree plot legends for different movement types and
+        robot states.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            The axes on which to add the legend.
+        robot : int
+            The index of the robot.
+        """
         fontsize = 8
         modes = range(self._specs.n_mode)
         colors = self._colors
@@ -1172,6 +2335,20 @@ class RRT:
         ).set_zorder(10)
 
     def _draw_robot(self, ax, robot, pose, color):
+        """
+        Draws the robot at a given position on the tree plot.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            The axes on which to plot the robot.
+        robot : int
+            The robot index.
+        pose : array-like, shape (2,)
+            The (x, y) position of the robot.
+        color : str
+            The color used for the robot marker.
+        """
         ax.plot(
             pose[0],
             pose[1],
@@ -1183,6 +2360,16 @@ class RRT:
         )
 
     def _set_subplot_online(self, ax, robot):
+        """
+        Configures a subplot for visualizing the tree and workspace.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            The subplot axes to configure.
+        robot : int
+            The robot index.
+        """
         ax.clear()
         # Boundaries.
         bx, by = self._specs.bounds
@@ -1206,6 +2393,28 @@ class RRT:
         self._draw_robot(ax, robot, self._goal.reshape(-1, 2)[robot], "lime")
 
     def _set_plot_online(self, fig=None, axes=None, cid=-1):
+        """
+        Initializes and configures the plotting environment for
+        real-time visualization of tree,.
+
+        Parameters
+        ----------
+        fig : matplotlib.figure.Figure, optional
+            The figure object for plotting (default is None).
+        axes : array-like of matplotlib.axes.Axes, optional
+            The subplot axes (default is None).
+        cid : int, optional
+            Connection ID for keyboard event handling (default is -1).
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The updated figure object.
+        axes : array-like of matplotlib.axes.Axes
+            The updated axes for subplots.
+        cid : int
+            The connection ID for event handling.
+        """
         fig = None
         if fig is None:
             n_robot = self._specs.n_robot
@@ -1231,6 +2440,25 @@ class RRT:
         return fig, axes, cid
 
     def _draw_line(self, ax, robot, poses, ltype=0):
+        """
+        Draws a line representing a planned path for requested robot.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            The axes on which to plot the line.
+        robot : int
+            The robot index.
+        poses : ndarray, shape (N, 2)
+            The sequence of (x, y) positions defining the path.
+        ltype : int, optional
+            The line type (default is 0,  see _ltypes attribute).
+
+        Returns
+        -------
+        art : matplotlib.lines.Line2D
+            The drawn line matplotlib artist.
+        """
         color, zorder = self._line_style_map.get(ltype)
         (art,) = ax.plot(
             poses[:, 0], poses[:, 1], lw=1.0, color=color, zorder=zorder
@@ -1238,6 +2466,20 @@ class RRT:
         return art
 
     def _edit_line(self, art, robot, poses, ltype=0):
+        """
+        Updates an existing path drawing for requested robot.
+
+        Parameters
+        ----------
+        art : matplotlib.lines.Line2D
+            The existing line artist to update.
+        robot : int
+            The robot index.
+        poses : ndarray, shape (N, 2)
+            The updated sequence of (x, y) path positions.
+        ltype : int, optional
+            The line type (default is 0).
+        """
         color, zorder = self._line_style_map.get(ltype)
         art.set(
             xdata=poses[:, 0],
@@ -1247,6 +2489,24 @@ class RRT:
         )
 
     def _draw_node(self, axes, ind, tracks, ltype):
+        """
+        Draws or updates a tree node representing.
+
+        Parameters
+        ----------
+        axes : array-like of matplotlib.axes.Axes
+            The set of axes for drawing the node.
+        ind : int
+            The index of the node.
+        tracks : ndarray
+            The carray of path from parent node to current index.
+        ltype : int
+            The line type for the node's path.
+
+        Notes
+        -----
+        - If the node exists, it updates the path instead of redrawing.
+        """
         arts = self._arts.get(ind)
         if arts is None:
             # Draw line and save the artist.
@@ -1262,10 +2522,28 @@ class RRT:
                 self._edit_line(art, i, tracks[:, 2 * i : 2 * i + 2], ltype)
 
     def _draw_nodes(self, iteration, axes):
+        """
+        Draws all nodes for a given iteration of the planning process.
+
+        Parameters
+        ----------
+        iteration : int
+            The current iteration index.
+        axes : array-like of matplotlib.axes.Axes
+            The set of axes for plotting.
+        """
         for ind, tracks, ltype in self._arts_info[iteration]:
             self._draw_node(axes, ind, tracks, ltype)
 
     def _get_stop_req(self):
+        """
+        Checks for user input to stop execution.
+
+        Returns
+        -------
+        stop_req : bool
+            True if the user enters 'Y' or 'y', otherwise False.
+        """
         stop_req = False
         in_str = input("Enter Y to stop: ").strip()
         if re.match("[Yy]", in_str):
@@ -1274,6 +2552,42 @@ class RRT:
 
 
 class RRTS(RRT):
+    """
+    Adapted Assymptotically Optimal Rapidly-exploring Random Tree
+    (Adapted RRT*) motion planner for class of heterogeneous robot
+    systems. This class extends the Adapted RRT algorithm with
+    additional features such as rewiring and cost propagation, improving
+    path quality over time.
+
+    Attributes
+    ----------
+        _ndim (int): Dimensionality of the state space (2 * number of
+        robots).
+        _k_s (float): Scaling factor for k-nearest neighbor selection.
+
+    Methods
+    -------
+    _k_nearest_neighbor(ind)
+        Finds the k-nearest neighbors of a node at the given index.
+    _edit_node(ind, pose, depth, parent, cmds, cmd_modes, track, cost)
+        Updates an existing node's properties.
+    _sort_inds(inds, values, costs, distances)
+        Sorts a list of nodes based on values, costs, and distances.
+    _get_all_childs(ind)
+        Retrieves all child nodes of a given node.
+    _propagate_cost_to_childs(ind, value_diff)
+        Propagates value updates to all child nodes.
+    _try_rewiring(ind_i, ind_f, rewiring_near_nodes=False)
+        Attempts to rewire a node for cost improvement.
+    _rewire_new_node(near_inds, new_ind)
+        Rewires the new node if improving its path value.
+    _rewire_near_nodes(new_ind, near_inds)
+        Rewires near nodes if improving its path value.
+    plans(start, goal, basic_mode_sequence=None, fig_name=None,
+          anim_name=None, anim_online=False, plot=False, log=True, lazy=False)
+        Generates a motion plan using Adapted RRT*.
+    """
+
     def __init__(
         self,
         specs,
@@ -1285,6 +2599,29 @@ class RRTS(RRT):
         goal_bias=0.07,
         tol_goal=1e-0,
     ) -> None:
+        """
+        Class constructor.
+
+        Parameters
+        ----------
+        specs : SwarmSpecs object
+            Specifications of robots and workspace boundaries.
+        collision : Collision object
+            Collision checking module.
+        obstacle_contours : List
+            List of obstacle outline contours.
+        max_size : int, optional
+            Maximum number of nodes in the tree (default is 1000).
+        max_iter : int, optional
+            Maximum iterations for the planner (default is 500000).
+        tol_cmd : float, optional (default is 1e-2).
+             Tolerance for removing zero length pseudo displacements.
+        goal_bias : float, optional
+            Probability of sampling goal position (default is 0.07).
+        tol_goal : float, optional
+            Tolerance for considering a node has reached the goal
+            (default is 1.0).
+        """
         super().__init__(
             specs,
             collision,
@@ -1299,6 +2636,19 @@ class RRTS(RRT):
         self._k_s = 2 * np.exp(1)
 
     def _k_nearest_neighbor(self, ind):
+        """
+        Finds the k-nearest neighbors of a given node.
+
+        Parameters
+        ----------
+        ind : int
+            Index of the node in the tree.
+
+        Returns
+        -------
+        np.ndarray
+            Indices of the nearest neighbors.
+        """
         pose = self._poses[ind]
         inds_searchable = np.nonzero(self._not_goal_mask[: self._N])[0]
         inds_selector = faiss.IDSelectorArray(inds_searchable)
@@ -1316,6 +2666,28 @@ class RRTS(RRT):
     def _edit_node(
         self, *, ind, pose, depth, parent, cmds, cmd_modes, track, cost
     ):
+        """
+        Updates an existing node in the tree.
+
+        Parameters
+        ----------
+        ind : int
+            Index of the node.
+        pose : np.ndarray
+            Updated position of the node.
+        depth : int
+            Updated depth of the node in the tree.
+        parent : int
+            Updated index of the parent node.
+        cmds : list
+            Updated pseudo displacement leading to this node.
+        cmd_modes : list
+            Updated corresponding mode sequence of cmds.
+        track : list
+            Updated path positions from parent node to this node.
+        cost : float
+            Updated cost of reaching this node from its parent.
+        """
         self._poses[ind] = pose
         self._depths[ind] = depth
         previous_parent = self._parents[ind]
@@ -1330,6 +2702,27 @@ class RRTS(RRT):
         self._childs[parent].append(ind)
 
     def _sort_inds(self, inds, values, costs, distances):
+        """
+        Sorts indices based on given values, costs, and distances in
+        ascending order.
+
+        Parameters
+        ----------
+        inds : np.ndarray
+            Array of node indices.
+        values : np.ndarray
+            Array of node values (e.g., path cost).
+        costs : np.ndarray
+            Array of immediate costs from each node's parent.
+        distances : np.ndarray
+            Array of given distances related to nodes.
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, np.ndarray]
+            Sorted indices, values, and costs, ordered first by value,
+            then cost, and finally distance.
+        """
         combined = np.array(
             list(zip(inds, values, costs, distances)),
             dtype=[
@@ -1343,6 +2736,19 @@ class RRTS(RRT):
         return inds[sorted_inds], values[sorted_inds], costs[sorted_inds]
 
     def _get_all_childs(self, ind):
+        """
+        Retrieves all child nodes of a given node recursively.
+
+        Parameters
+        ----------
+        ind : int
+            Index of the node of interest.
+
+        Returns
+        -------
+        list
+            List of child node indices.
+        """
         childs = []
         for index in self._childs[ind]:
             childs.append(index)
@@ -1350,12 +2756,37 @@ class RRTS(RRT):
         return childs
 
     def _propagate_cost_to_childs(self, ind, value_diff):
+        """
+        Propagates cost updates to all child nodes.
+
+        Parameters
+        ----------
+        ind : int
+            Index of the node.
+        value_diff : float
+            Value difference to be propagated.
+        """
         # Get list of indexes of all childs down the tree.
         childs = self._get_all_childs(ind)
         # Add value diff to all childs.
         self._values[childs] += value_diff
 
     def _try_rewiring(self, ind_i, ind_f, rewiring_near_nodes=False):
+        """
+        Tries to rewire a node at ind_f to the node at ind_i if the path
+        from node in ind_i to the node in ind_i is collision free and
+        improving value of the node in ind_f.
+
+        Parameters
+        ----------
+        ind_i : int
+            Index of potential parent node.
+        ind_f : int
+            Index of the node to be rewired if possible.
+        rewiring_near_nodes: bool (default is False)
+            True if ind_f is index of a node from near neighbhors.
+            False if it is index of new node.
+        """
         rewired = False
         not_goal = self._not_goal_mask[ind_f]
         value_past = self._values[ind_f]
@@ -1404,6 +2835,19 @@ class RRTS(RRT):
         return rewired
 
     def _rewire_new_node(self, near_inds, new_ind):
+        """
+        Attempts to rewire the new node from its neighbhor nodes if it
+        improves value of new node. It does this by sorting potential
+        rewirings by their value estimates and stops at first successful
+        rewire.
+
+        Parameters
+        ----------
+        near_inds : np.ndarray
+            Indices of nearby nodes that could be potential new parents.
+        new_ind : int
+            Index of the new node
+        """
         new_value = self._values[new_ind]
         new_pose = self._poses[new_ind]
         near_poses = self._poses[near_inds]
@@ -1429,6 +2873,23 @@ class RRTS(RRT):
                 break
 
     def _rewire_near_nodes(self, new_ind, near_inds):
+        """
+        Attempts to rewire near nodes from new node to improve their
+        path value. It uses rewired value estimates to weed out
+        potentially non improving candidates.
+
+        Parameters
+        ----------
+        new_ind : int
+            Index of the new node.
+        near_inds : np.ndarray
+            Indices of near nodes that might benefit from rewiring.
+
+        Returns
+        -------
+        List[int]
+            Indices of nodes that were successfully rewired.
+        """
         # Remove indices with higher rewired_values.
         new_pose = self._poses[new_ind]
         near_values = self._values[near_inds]
@@ -1460,6 +2921,39 @@ class RRTS(RRT):
         log=True,
         lazy=False,
     ):
+        """
+        Plans a path from the start position to the goal using the
+        Adapted RRT* algorithm.
+
+        Parameters
+        ----------
+        start : array-like
+            Start position of robots.
+        goal : array-like
+            Goal position of robots.
+        basic_mode_sequence : optional
+            A basic mode sequence for path planning.
+        fig_name : str, optional
+            Name of the figure to save the final plot, if provided.
+        anim_name : str, optional
+            Name of the animation file, if provided.
+        anim_online : bool, default=False
+            If True, updates animation online during planning.
+        plot : bool, default=False
+            If True, visualizes tree the planning process.
+        log : bool, default=True
+            If True, logs the planning process iterations.
+        lazy : bool, default=False
+            If True, terminates the search immediately after reaching
+            the goal.
+
+        Returns
+        -------
+        None
+            The function modifies internal state variables and stores
+            the planned path.
+        """
+
         # Reset existing tree.
         self._log = log
         self._reset_tree()
@@ -1549,6 +3043,22 @@ class RRTS(RRT):
 
 
 def test_obstacle():
+    """
+    Tests obstacle representation and simulation for a group of robots.
+
+    This function sets up a heterogeneous robotic system, defines
+    obstacles in the environment, and runs a simulation with specified
+    commands to visualize the system movements
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+        This function runs a simulation and visualizes the results.
+    """
     from matplotlib.patches import Polygon
 
     # Build specs of robots and obstacles.
@@ -1581,10 +3091,21 @@ def test_obstacle():
     # Draw mesh contours.
     for cnt in mesh_contours:
         ax.add_patch(Polygon(cnt, ec="lime", fill=False))
-    plt.show(block=False)
 
 
 def test_collision():
+    """
+    Tests various collision detection methods of Collision class.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+        The function prints out the results of multiple collision checks.
+    """
     # Build specs of robots and obstacles.
     specs = model.SwarmSpecs.robo3()
     # Obstacle contours.
@@ -1625,6 +3146,19 @@ def test_collision():
 
 
 def test_rrt3():
+    """
+    Tests Adapted RRT* planning algorithm on a 3 robot system.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+        The function logs the runtime of the planning process and
+        displays simulation results.
+    """
     np.random.seed(42)  # Keep for consistency, but can be removed.
     # Build specs of robots and obstacles.
     specs = model.SwarmSpecs.robo3()
@@ -1655,7 +3189,6 @@ def test_rrt3():
         goal_bias=0.05,
         max_size=4000,
     )
-    self = rrt
     start_time = time.time()
     rrt.plans(pose_i, pose_f, [0, 1, 2], anim_online=False, plot=True)
     end_time = time.time()
@@ -1678,76 +3211,23 @@ def test_rrt3():
         boundary=True,
         last_section=True,
     )
-    plt.show()
-
-
-def test_rrt4():
-    np.random.seed(42)  # Keep for consistency, but can be removed.
-    # Build specs of robots and obstacles.
-    specs = model.SwarmSpecs.robo4()
-    specs_mod = model.SwarmSpecs.robo4()
-    specs_mod.set_space(clearance=10)
-    # Obstacle contours.
-    obstacle_contours = [
-        np.array([[-5, -25], [-5, -90], [5, -90], [5, -25]], dtype=float),
-        np.array([[-5, 90], [-5, 25], [5, 25], [5, 90]], dtype=float),
-    ]
-    obstacles = Obstacles(specs, obstacle_contours)
-    obstacle_contours = obstacles.get_cartesian_obstacle_contours()
-    mesh, mesh_contours = obstacles.get_obstacle_mesh()
-    # Add obstacles to specification.
-    specs.set_obstacles(obstacle_contours=obstacle_contours)
-
-    collision = Collision(mesh, specs)
-    collision_mod = Collision(mesh, specs_mod)
-    pose = np.array([50, 40, 50, 15, 50, -15, 50, -40], dtype=float)
-    _ = collision.is_collision(pose)
-    #
-    N = 100
-    pose_i = np.array([50, 40, 50, 15, 50, -15, 50, -40], dtype=float)
-    pose_f = np.array([-50, 40.0, -50, 15, -50, -15, -50, -40], dtype=float)
-    poses = np.linspace(pose_i, pose_f, N + 1)
-
-    rrt = RRTS(
-        specs,
-        collision,
-        obstacle_contours,
-        goal_bias=0.09,
-        max_size=4000,
-    )
-    self = rrt
-    start_time = time.time()
-    rrt.plans(pose_i, pose_f, [0, 1, 2, 3, 4], anim_online=False, plot=False)
-    end_time = time.time()
-    runtime = end_time - start_time
-    logger.debug(f"The runtime of the test() function is {runtime} seconds")
-    # Process the command.
-    cmds = rrt.cmds
-    cmds = rrt.post_process(rrt.cmds, ang=240)  # Add mode change.
-    cmds = model.cartesian_to_polar(cmds)  # Convert to polar.
-    # Run simulation.
-    simulation = model.Simulation(specs)
-    # Simulate the system
-    poses, cmds = simulation.simulate(cmds, pose_i)
-    logger.debug(
-        f"is_collision_path: {collision_mod.is_collision_path(np.vstack(poses[:,0]))}"
-    )
-    # Draw simulation results.
-    simulation.simplot(
-        step=10,
-        plot_length=1000,
-        boundary=True,
-        last_section=False,
-    )
-    anim = simulation.simanimation(
-        anim_length=1100,
-        boundary=True,
-        last_section=True,
-    )
-    plt.show()
 
 
 def test_errt4(tol_cmd=15.0, goal_bias=0.09):
+    """
+    Tests Adapted RRT* planning algorithm on a 4 robot system.
+    It uses specifications of the experimental robots.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+        The function logs the runtime of the planning process and
+        displays simulation results.
+    """
     np.random.seed(42)  # Keep for consistency, but can be removed.
     # Build specs of robots and obstacles.
     specs = model.SwarmSpecs.robo(4)
@@ -1765,7 +3245,6 @@ def test_errt4(tol_cmd=15.0, goal_bias=0.09):
     collision = Collision(mesh, specs)
     #
     pose_i = np.array([40, 45, 40, 15, 40, -15, 40, -45], dtype=float)
-    # pose_i = np.array([-43,40, -43,18, -45,-10, -36,-45], dtype=float)
     pose_f = np.array([-40, 45, -40, 15, -40, -15, -40, -45], dtype=float)
     #
     rrt = RRTS(
@@ -1776,15 +3255,14 @@ def test_errt4(tol_cmd=15.0, goal_bias=0.09):
         goal_bias=goal_bias,
         max_size=20000,
     )
-    self = rrt
     start_time = time.time()
     rrt.plans(pose_i, pose_f, [0, 1, 2, 3, 4], anim_online=False, plot=False)
     end_time = time.time()
     runtime = end_time - start_time
     logger.debug(f"The runtime of the test() function is {runtime} seconds")
-    """ # Process the command.
+    # Process the command.
     cmds = rrt.cmds
-    cmds = rrt.post_process(rrt.cmds, ang=10)  # Add mode change.
+    # cmds = rrt.post_process(rrt.cmds, ang=10)  # Add mode change.
     cmds = model.cartesian_to_polar(cmds)  # Convert to polar.
     # Run simulation.
     simulation = model.Simulation(specs)
@@ -1796,16 +3274,28 @@ def test_errt4(tol_cmd=15.0, goal_bias=0.09):
         plot_length=1000,
         boundary=True,
         last_section=False,
-    ) """
-    """ anim = simulation.simanimation(
+    )
+    anim = simulation.simanimation(
         anim_length=1100,
         boundary=True,
         last_section=True,
-    ) """
-    # plt.show()
+    )
 
 
 def test_rrt5():
+    """
+    Tests Adapted RRT* planning algorithm on a 5 robot system.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+        The function logs the runtime of the planning process and
+        displays simulation results.
+    """
     np.random.seed(42)  # Keep for consistency, but can be removed.
     # Build specs of robots and obstacles.
     specs = model.SwarmSpecs.robo5()
@@ -1819,10 +3309,7 @@ def test_rrt5():
     mesh, mesh_contours = obstacles.get_obstacle_mesh()
     # Add obstacles to specification.
     specs.set_obstacles(obstacle_contours=obstacle_contours)
-
     collision = Collision(mesh, specs)
-    pose = np.array([50, 40, 50, 20, 50, 0, 50, -20, 50, -40], dtype=float)
-    _ = collision.is_collision(pose)
     #
     N = 100
     pose_i = np.array([50, 50, 50, 25, 50, 0, 50, -25, 50, -50], dtype=float)
@@ -1838,7 +3325,6 @@ def test_rrt5():
         goal_bias=0.07,
         max_size=50000,
     )
-    self = rrt
     start_time = time.time()
     rrt.plans(pose_i, pose_f, [0, 1, 2, 3, 4], anim_online=False, plot=False)
     end_time = time.time()
@@ -1861,140 +3347,22 @@ def test_rrt5():
         boundary=True,
         last_section=True,
     )
-    plt.show()
 
 
-def test_rrt10_big():
-    np.random.seed(42)  # Keep for consistency, but can be removed.
-    # Build specs of robots and obstacles.
-    specs = model.SwarmSpecs.robo10()
-    specs.set_space(lbx=-200, ubx=200, lby=-150, uby=150, rcoil=300)
-    # Obstacle contours.
-    obstacle_contours = [
-        np.array([[-75, 5], [-75, -200], [-65, -200], [-65, 5]], dtype=float),
-        np.array([[65, 200], [65, -5], [75, -5], [75, 200]], dtype=float),
-    ]
-    obstacles = Obstacles(specs, obstacle_contours)
-    obstacle_contours = obstacles.get_cartesian_obstacle_contours()
-    mesh, mesh_contours = obstacles.get_obstacle_mesh()
-    # Add obstacles to specification.
-    specs.set_obstacles(obstacle_contours=obstacle_contours)
+def test_rrt10(tol_cmd=0.01, goal_bias=0.04, max_size=100000):
+    """
+    Tests Adapted RRT* planning algorithm on a 10 robot system.
 
-    collision = Collision(mesh, specs, with_coil=False)
-    pose = np.array(
-        [
-            140,
-            75,
-            140,
-            70,
-            140,
-            60,
-            140,
-            50,
-            140,
-            40,
-            140,
-            30,
-            140,
-            20,
-            140,
-            10,
-            140,
-            0,
-            140,
-            -10,
-        ],
-        dtype=float,
-    )
-    _ = collision.is_collision(pose)
+    Parameters
+    ----------
+    None
 
-    N = 100
-    pose_i = np.array(
-        [
-            140,
-            90,
-            140,
-            70,
-            140,
-            50,
-            140,
-            30,
-            140,
-            10,
-            140,
-            -10,
-            140,
-            -30,
-            140,
-            -50,
-            140,
-            -70,
-            140,
-            -90,
-        ],
-        dtype=float,
-    )
-    pose_f = np.array(
-        [
-            -140,
-            90,
-            -140,
-            70,
-            -140,
-            50,
-            -140,
-            30,
-            -140,
-            10,
-            -140,
-            -10,
-            -140,
-            -30,
-            -140,
-            -50,
-            -140,
-            -70,
-            -140,
-            -90,
-        ],
-        dtype=float,
-    )
-    #
-    rrt = RRTS(
-        specs,
-        collision,
-        obstacle_contours,
-        goal_bias=0.05,
-        max_size=25000,
-    )
-    self = rrt
-    start_time = time.time()
-    rrt.plans(pose_i, pose_f, np.arange(11), anim_online=False, plot=False)
-    end_time = time.time()
-    runtime = end_time - start_time
-    logger.debug(f"The runtime of the test() function is {runtime} seconds")
-    cmds = model.cartesian_to_polar(rrt.cmds)
-    # Run simulation.
-    simulation = model.Simulation(specs)
-    # Simulate the system
-    simulation.simulate(cmds, pose_i)
-    # Draw simulation results.
-    simulation.simplot(
-        step=10,
-        plot_length=1000,
-        boundary=True,
-        last_section=False,
-    )
-    anim = simulation.simanimation(
-        vel=30,
-        anim_length=1100,
-        boundary=True,
-        last_section=True,
-    )
-    plt.show()
-
-
-def test_rrt10(tol_cmd=0.01, goal_bias=0.04, max_size=200000):
+    Returns
+    -------
+    None
+        The function logs the runtime of the planning process and
+        displays simulation results.
+    """
     np.random.seed(42)  # Keep for consistency, but can be removed.
     # Build specs of robots and obstacles.
     specs = model.SwarmSpecs.robo10()
@@ -2003,41 +3371,15 @@ def test_rrt10(tol_cmd=0.01, goal_bias=0.04, max_size=200000):
         np.array([[-45, 5], [-45, -200], [-55, -200], [-55, 5]], dtype=float),
         np.array([[55, 200], [55, -5], [45, -5], [45, 200]], dtype=float),
     ]
+    # Build obstacle mesh.
     obstacles = Obstacles(specs, obstacle_contours)
     obstacle_contours = obstacles.get_cartesian_obstacle_contours()
     mesh, mesh_contours = obstacles.get_obstacle_mesh()
-    # Add obstacles to specification.
+    # Add obstacles to specification for visualizations.
     specs.set_obstacles(obstacle_contours=obstacle_contours)
-
+    # Set up collision detection.
     collision = Collision(mesh, specs, with_coil=False)
-    pose = np.array(
-        [
-            100,
-            75,
-            100,
-            70,
-            100,
-            60,
-            100,
-            50,
-            100,
-            40,
-            100,
-            30,
-            100,
-            20,
-            100,
-            10,
-            100,
-            0,
-            100,
-            -10,
-        ],
-        dtype=float,
-    )
-    _ = collision.is_collision(pose)
-
-    N = 100
+    # Start and goal positions
     pose_i = np.array(
         [
             100,
@@ -2088,7 +3430,7 @@ def test_rrt10(tol_cmd=0.01, goal_bias=0.04, max_size=200000):
         ],
         dtype=float,
     )
-    #
+    # Set up Adapted RRT* instance.
     rrt = RRTS(
         specs,
         collision,
@@ -2097,12 +3439,13 @@ def test_rrt10(tol_cmd=0.01, goal_bias=0.04, max_size=200000):
         goal_bias=goal_bias,
         max_size=max_size,
     )
-    self = rrt
+    # Search for path plan.
     start_time = time.time()
     rrt.plans(pose_i, pose_f, np.arange(10), anim_online=False, plot=False)
     end_time = time.time()
     runtime = end_time - start_time
     logger.debug(f"The runtime of the test() function is {runtime} seconds")
+    # Convert pseudo displacements to polar coordinate.
     cmds = model.cartesian_to_polar(rrt.cmds)
     # Run simulation.
     simulation = model.Simulation(specs)
@@ -2115,13 +3458,13 @@ def test_rrt10(tol_cmd=0.01, goal_bias=0.04, max_size=200000):
         boundary=True,
         last_section=False,
     )
+    # Animate the simulation results.
     anim = simulation.simanimation(
         vel=30,
         anim_length=1100,
         boundary=True,
         last_section=True,
     )
-    plt.show()
 
 
 ########## test section ################################################
@@ -2133,5 +3476,6 @@ if __name__ == "__main__":
     logger.addHandler(file_handler)
     # test_obstacle()
     # test_collision()
-    # test_rrt4()
+    # test_errt4()
+    # test_rrt10()
     plt.show()
