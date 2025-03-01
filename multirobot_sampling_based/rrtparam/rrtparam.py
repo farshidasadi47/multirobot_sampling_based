@@ -445,7 +445,7 @@ def rrt10(
         rrt.plan(
             pose_i,
             pose_f,
-            np.arange(11),
+            np.arange(10),
             anim_online=False,
             plot=False,
             log=False,
@@ -948,26 +948,6 @@ def eval_param_rrt5():
     param_ranges = {
         "max_size": [10000],
         "tol_cmd": log_range(-2, 2, 2).tolist() + [20.0, 30.0],
-        "goal_bias": log_range(-2, 0, 2).tolist() + [0.2, 0.3],
-    }
-    start_time = time.time()
-    results = evaluate_from_subprocess(
-        planner, n=n, file_name=file_name, **param_ranges
-    )
-    end_time = time.time()
-    runtime = end_time - start_time
-    print(results)
-    print(f"The runtime of the test() function is {runtime} seconds")
-
-
-def eval_param_rrt10big():
-    file_name = "rrt10_200000_11"
-    planner = rrt10big
-    n = 11
-    params = {"max_size": 200000, "tol_cmd": 1e-1, "goal_bias": 1e-3}
-    param_ranges = {
-        "max_size": [200000],
-        "tol_cmd": log_range(-2, 2, 2).tolist(),
         "goal_bias": log_range(-2, 0, 2).tolist() + [0.2, 0.3],
     }
     start_time = time.time()

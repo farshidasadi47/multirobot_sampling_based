@@ -24,7 +24,6 @@ planners = {
     "rrt3": rrtparam.rrt3,
     "rrt4": rrtparam.rrt4,
     "rrt5": rrtparam.rrt5,
-    "rrt10big": rrtparam.rrt10big,
     "rrt10": rrtparam.rrt10,
     "errt4": rrtparam.errt4,
 }
