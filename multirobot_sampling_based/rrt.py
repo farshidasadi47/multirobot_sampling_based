@@ -532,19 +532,6 @@ class RRT:
         self._collision = collision
         self._obstacle_contours = obstacle_contours
         self._WI = np.linalg.pinv(specs.W)
-        self._WITZ = np.zeros(
-            (specs.n_mode, specs.n_robot * 2, specs.n_robot * 2), dtype=float
-        )
-        for m in range(specs.n_mode):
-            self._WITZ[m] = (
-                self._WI[2 * m : 2 * m + 2, :].T
-                @ self._WI[2 * m : 2 * m + 2, :]
-            )
-        self._WIT = self._WI.T @ self._WI
-        self._T = np.zeros_like(self._WITZ)
-        self._T[0] = np.eye(specs.n_robot * 2) + specs.B[0] @ specs.K[0]
-        for m in range(specs.n_mode - 1):
-            self._T[m + 1] = self._T[m] + specs.B[m + 1] @ specs.K[m + 1]
         # Tree properties.
         self._max_size = max_size
         self._max_iter = max_iter
@@ -556,6 +543,7 @@ class RRT:
         self._tol_pose = 1e-6  # Tolerance for checking repetition.
         self._goal_bias = goal_bias
         self._tol_goal = tol_goal
+        self._eps = 0.1  # Improvement threshold.
         #
         self._log = True
         self._reset_tree()
@@ -898,7 +886,7 @@ class RRT:
     def _add_new_path(self, ind):
         ltype = 1
         inds_to_draw = []
-        if self._values[ind] < self.best_value * 0.99:
+        if self._values[ind] < self.best_value - self._eps:
             # New best path is found.
             if self._best_path_ind is not None:
                 # Set ltype of previous best path to suboptimal.
@@ -923,7 +911,7 @@ class RRT:
             [self._goal_ind_values.get(ind) for ind in self._goal_inds]
         )
         inds_to_update = np.where(
-            self._values[self._goal_inds] < past_values * 0.99
+            self._values[self._goal_inds] < past_values - self._eps
         )[0]
         # Add new_ind to update list if necessary.
         if goal_reached:
@@ -949,7 +937,7 @@ class RRT:
         if len(self._goal_inds):
             ind_best = self._values[self._goal_inds].argmin()
             ind_best = self._goal_inds[ind_best]
-            if self._values[ind_best] < self.best_value * 0.99:
+            if self._values[ind_best] < self.best_value - self._eps:
                 # A better path has been discovered.
                 inds_to_draw += self._add_new_path(ind_best)
         return inds_to_draw
@@ -1309,7 +1297,6 @@ class RRTS(RRT):
         )
         self._ndim = 2 * self._specs.n_robot  # Space dimension.
         self._k_s = 2 * np.exp(1)
-        self._eps = 0.1  # Improvement threshold.
 
     def _k_nearest_neighbor(self, ind):
         pose = self._poses[ind]
