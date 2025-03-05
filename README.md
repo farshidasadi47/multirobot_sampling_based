@@ -11,7 +11,7 @@ Example 1: Animation of moving 10 robots through obstacles and aligning them on 
 [![Video 1](https://img.youtube.com/vi/XgpuL6UDEKw/0.jpg)](https://www.youtube.com/watch?v=XgpuL6UDEKw) | [![Video 2](https://img.youtube.com/vi/OFOvsfrkxKw/0.jpg)](https://www.youtube.com/watch?v=OFOvsfrkxKw) | [![Video 3](https://img.youtube.com/vi/KzKwsqhUuUU/0.jpg)](https://www.youtube.com/watch?v=KzKwsqhUuUU)
 
 ## Structure of the code
-The repository is a ROS2 package and the main code is in `swarm` folder.
+The repository is a ROS2 package and the main code is in `multirobot_sampling_based` folder.
 
 The structure of this folder is:
 ```
@@ -39,7 +39,7 @@ The `localization.py`, `closedloop.py`, and `rosclosed.py` modules are required 
 
 The `model.py` and `rrt.py` modules are sufficient for running simulations and will be described more.
 ## Dependencies
-The python dependencies of `model.py` and `planner.py` can be installed as:
+The python dependencies of `model.py` and `rrt.py` can be installed as:
 ```
 pip install numpy==1.26.4
 pip install matplotlib==3.9.2
