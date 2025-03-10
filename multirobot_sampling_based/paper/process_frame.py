@@ -504,16 +504,16 @@ class ProcessVideo:
             "",
             xy=(
                 (pix_r[0] + 0.5) / self.f_width,
-                (self.f_height - pix_r[1] - 1.0) / self.f_height,
+                (self.f_height - pix_r[1] - 0.5) / self.f_height,
             ),
             xycoords="axes fraction",
             xytext=(
                 (pix_l[0] - 0.5) / self.f_width,
-                (self.f_height - pix_l[1] - 1.0) / self.f_height,
+                (self.f_height - pix_l[1] - 0.5) / self.f_height,
             ),
             textcoords="axes fraction",
             arrowprops=dict(
-                arrowstyle="|-|, widthA=0.5, widthB=.5",
+                arrowstyle="|-|, widthA=0.75, widthB=.75",
                 connectionstyle="arc",
                 color="k",
                 linewidth=4.0,
@@ -857,9 +857,9 @@ def example_modes():
     light = 0.6
     FIG_AX = []
     files = [
-        ("mode_0", True, False),
+        ("mode_0", False, False),
         ("mode_1", False, False),
-        ("mode_2", False, True),
+        ("mode_2", True, True),
     ]
     for i, (file, scale, legend) in enumerate(files):
         # Mode 0
@@ -958,5 +958,5 @@ def example_3():
 
 ########## test section ################################################
 if __name__ == "__main__":
-    example_3()
+    # example_3()
     plt.show()
