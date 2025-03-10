@@ -403,7 +403,7 @@ def plot_height(filename, save=False, dmin=5, log=False, fittype=None):
         data = json.load(file)
     #
     height = np.array([v["height"] for v in data.values()]) / dmin
-    ylabel = r"Width / min. dist. ratio"
+    ylabel = r"Height / min. dist. ratio"
     n_robots = np.array([int(k) for k in data.keys()])
     # Plot data points and set figure up.
     fig, ax = plt.subplots(layout="constrained")
@@ -503,7 +503,7 @@ def plot_iteration(filename, save=False, log=False):
     ax.xaxis.set_tick_params(labelsize=fs)
     ax.yaxis.set_tick_params(labelsize=fs)
     ax.set_xlabel(r"$\#$ robots", fontsize=fs)
-    ax.set_ylabel(r"Min. $\#$ iterations", fontsize=fs)
+    ax.set_ylabel(r"Min. $\#$ nodes", fontsize=fs)
     # Add legend.
     handles, labels = [], []
     handles += [plt.plot([], [], ls="", marker="D", mfc="r", ms=ms)[0]]
