@@ -8,6 +8,7 @@ import time
 import re
 from typing import TypedDict
 import logging
+import os
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -15,6 +16,7 @@ from matplotlib.patches import Polygon
 from matplotlib.legend_handler import HandlerTuple
 from scipy.optimize import root
 import faiss
+from matplotlib import animation
 
 import triangle as tr
 import cv2 as cv
@@ -2214,7 +2216,8 @@ class RRT:
         _ = self._add_node(
             pose=self._start,
         )
-        if plot:
+        ranim = None
+        if plot or anim_name:
             fig, axes, cid = self._set_plot_online()
         i = 1
         n_nodes = 1
@@ -2266,9 +2269,11 @@ class RRT:
                 toggle = True
                 # Generate and update paths.
                 inds_to_draw += self._update_paths(new_ind, goal_reached)
+                # Update indices to draw.
+                if plot or anim_name:
+                    self._set_arts_info(inds_to_draw)
                 # Draw Nodes.
                 if plot:
-                    self._set_arts_info(inds_to_draw)
                     self._draw_nodes(n_nodes, axes)
                 n_nodes += 1
             i += 1
@@ -2283,6 +2288,10 @@ class RRT:
                 break
         if self._log:
             logger.debug(f"# nodes = {n_nodes:> 6d}, iteration = {i:>7d}")
+        #
+        if anim_name:
+            ranim = self._animate(fig, axes, i, file_name=anim_name)
+        return ranim
 
     def _set_legends_online(self, ax, robot):
         """
@@ -2549,6 +2558,42 @@ class RRT:
         if re.match("[Yy]", in_str):
             stop_req = True
         return stop_req
+
+    def _animate(self, fig, axes, iterations, file_name=None):
+        # Clear arts.
+        self._arts = {}
+        # Clear and set up screen.
+        for i, ax in enumerate(axes):
+            ax.clear()
+            self._set_subplot_online(ax, i)
+        dpi = 300
+        fig.set_dpi(dpi)
+        # Set up video configs.
+        fps = 60
+        interval = 1000 // fps
+        fps = 1000 / interval
+        # Animating
+        frames = list(range(1, self._N)) + [self._N - 1] * (int(fps) * 3)
+        anim = animation.FuncAnimation(
+            fig,
+            self._draw_nodes,
+            fargs=(axes,),
+            interval=interval,
+            frames=frames,
+        )
+        # Saving animation.
+        if file_name:
+            file_name = os.path.join(os.getcwd(), f"{file_name}.mp4")
+            anim.save(
+                file_name,
+                fps=fps,
+                writer="ffmpeg",
+                codec="libx264rgb",
+                extra_args=["-crf", "0", "-preset", "slow", "-b:v", "10M"],
+            )
+        plt.show(block=False)
+        plt.pause(0.01)
+        return anim
 
 
 class RRTS(RRT):
@@ -2966,7 +3011,8 @@ class RRTS(RRT):
         _ = self._add_node(
             pose=self._start,
         )
-        if plot:
+        ranim = None
+        if plot or anim_name:
             fig, axes, cid = self._set_plot_online()
         i = 1
         n_nodes = 1
@@ -3023,6 +3069,9 @@ class RRTS(RRT):
                 inds_to_draw += self._rewire_near_nodes(new_ind, near_inds)
                 # Generate and update paths.
                 inds_to_draw += self._update_paths(new_ind, goal_reached)
+                # Update indices to draw.
+                if plot or anim_name:
+                    self._set_arts_info(inds_to_draw)
                 # Draw Nodes.
                 if plot:
                     self._set_arts_info(inds_to_draw)
@@ -3040,6 +3089,10 @@ class RRTS(RRT):
                 break
         if self._log:
             logger.debug(f"# nodes = {n_nodes:> 6d}, iteration = {i:>7d}")
+        #
+        if anim_name:
+            ranim = self._animate(fig, axes, i, file_name=anim_name)
+        return ranim
 
 
 def test_obstacle():
