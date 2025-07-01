@@ -1247,8 +1247,8 @@ class RRT:
         self._arts = {}
         # Define the mapping of ltype to (color, zorder)
         self._line_style_map = {
-            0: ("deepskyblue", 4),  # Normal.
-            1: ("violet", 6),  # Suboptimal.
+            0: ("dodgerblue", 4),  # Normal.
+            1: ("lime", 6),  # Suboptimal.
             2: ("red", 10),  # Optimal.
         }
 
@@ -2314,9 +2314,9 @@ class RRT:
         )[0]
         legend_line = lambda c, ls: plt.plot([], [], color=c, ls=ls)[0]
         # Add start and goal legends.
-        handles = [legend_robot("s", "yellow")]
+        handles = [legend_robot("o", "yellow")]
         labels = ["Start"]
-        handles += [legend_robot("s", "lime")]
+        handles += [legend_robot("o", "red")]
         labels += ["Goal"]
         # Add modes legends.
         # handles += [legend_line(colors[mode], "-") for mode in modes]
@@ -2324,10 +2324,13 @@ class RRT:
             legend_line("deepskyblue", self._styles[mode][1]) for mode in modes
         ]
         labels += [f"M {mode}" for mode in modes] """
-        handles += [legend_line("deepskyblue", "-")]
+        handles += [legend_line(self._line_style_map[0][0], "-")]
         labels += ["Not reached"]
         # Add suboptimal and optimal legends.
-        handles += [legend_line("violet", "-"), legend_line("red", "-")]
+        handles += [
+            legend_line(self._line_style_map[1][0], "-"),
+            legend_line(self._line_style_map[2][0], "-"),
+        ]
         labels += ["Suboptimal", "Optimal"]
         #
         ax.legend(
@@ -2362,10 +2365,10 @@ class RRT:
             pose[0],
             pose[1],
             ls="",
-            marker="s",
+            marker="o",
             mfc=color,
             mec="k",
-            zorder=10.0,
+            zorder=20.0,
         )
 
     def _set_subplot_online(self, ax, robot):
@@ -2389,9 +2392,15 @@ class RRT:
         ax.set_yticklabels([])
         ax.tick_params(direction="in", zorder=10)
         #
-        ax.grid(zorder=0.0)
+        # ax.grid(zorder=0.0)
+        ax.grid(False)
         ax.set_aspect("equal", adjustable="box")
         self._set_legends_online(ax, robot)
+        # Set subplot title
+        if robot == 0:
+            ax.set_title("Robot 0, leader")
+        else:
+            ax.set_title(f"Robot {robot}")
         # Draw obstacles.
         for i, cnt in enumerate(self._obstacle_contours):
             ax.add_patch(Polygon(cnt, ec="k", lw=1, fc="slategray", zorder=2))
@@ -2399,7 +2408,7 @@ class RRT:
         self._draw_robot(
             ax, robot, self._start.reshape(-1, 2)[robot], "yellow"
         )
-        self._draw_robot(ax, robot, self._goal.reshape(-1, 2)[robot], "lime")
+        self._draw_robot(ax, robot, self._goal.reshape(-1, 2)[robot], "red")
 
     def _set_plot_online(self, fig=None, axes=None, cid=-1):
         """
@@ -2429,7 +2438,8 @@ class RRT:
             n_robot = self._specs.n_robot
             n_col = 3
             n_row = np.ceil(n_robot / n_col).astype(int)
-            fig, axes = plt.subplots(n_row, n_col, layout="compressed")
+            fig, axes = plt.subplots(n_row, n_col, constrained_layout=True)
+            fig.set_size_inches(5 * n_col, 4 * n_row)
             axes = axes.ravel()
             # Remove unnecessary axes.
             for i in range(n_robot, n_row * n_col):
@@ -3143,7 +3153,7 @@ def test_obstacle():
     )
     # Draw mesh contours.
     for cnt in mesh_contours:
-        ax.add_patch(Polygon(cnt, ec="lime", fill=False))
+        ax.add_patch(Polygon(cnt, ec="g", fill=False))
 
 
 def test_collision():
@@ -3198,7 +3208,7 @@ def test_collision():
     print(f"is_collision_line {collision.is_collision_line(pose_i, pose_f)}")
 
 
-def test_rrt3():
+def test_rrt3(tol_cmd=17.0, goal_bias=0.01):
     """
     Tests Adapted RRT* planning algorithm on a 3 robot system.
 
@@ -3239,8 +3249,9 @@ def test_rrt3():
         specs,
         collision,
         obstacle_contours,
-        goal_bias=0.05,
-        max_size=4000,
+        tol_cmd=tol_cmd,
+        goal_bias=goal_bias,
+        max_size=1200,
     )
     start_time = time.time()
     rrt.plans(pose_i, pose_f, [0, 1, 2], anim_online=False, plot=True)
