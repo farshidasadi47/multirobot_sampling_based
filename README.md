@@ -8,7 +8,7 @@ Videos related to the examples in the paper can be seen below:
 
 Example 1: Animation of moving 10 robots through obstacles and aligning them on specified positions | Example 3: Moving 4 robots through a passage and aligning them on specified positions | Example 3: Animation of moving 4 robots through a passage and aligning them on specified positions
 ---|---|---
-[![Video 1](https://img.youtube.com/vi/XgpuL6UDEKw/0.jpg)](https://www.youtube.com/watch?v=XgpuL6UDEKw) | [![Video 2](https://img.youtube.com/vi/OFOvsfrkxKw/0.jpg)](https://www.youtube.com/watch?v=OFOvsfrkxKw) | [![Video 3](https://img.youtube.com/vi/KzKwsqhUuUU/0.jpg)](https://www.youtube.com/watch?v=KzKwsqhUuUU)
+[![Video 1](https://img.youtube.com/vi/D8X8AVf3tI0/0.jpg)](https://www.youtube.com/watch?v=D8X8AVf3tI0) | [![Video 2](https://img.youtube.com/vi/OFOvsfrkxKw/0.jpg)](https://www.youtube.com/watch?v=OFOvsfrkxKw) | [![Video 3](https://img.youtube.com/vi/KzKwsqhUuUU/0.jpg)](https://www.youtube.com/watch?v=KzKwsqhUuUU)
 
 ## Structure of the code
 The repository is a ROS2 package and the main code is in `multirobot_sampling_based` folder.
