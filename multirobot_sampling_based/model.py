@@ -1132,7 +1132,7 @@ class Simulation:
         n_steps = np.sum(n_steps).item() + 1
         anim_length = min(anim_length, n_steps)
         # Set the figure properties
-        dpi = 100
+        dpi = 300
         fig, ax = plt.subplots(layout="tight")
         fig.set_size_inches(19.2, 10.8)
         fig.set_dpi(dpi)
@@ -1628,8 +1628,8 @@ def test_simulation10():
         file_name=file_name,
     )
     """ anim = simulation.simanimation(
-        vel=30,
-        anim_length=1100,
+        vel=10,
+        anim_length=3300,
         boundary=True,
         last_section=True,
         file_name=file_name,
